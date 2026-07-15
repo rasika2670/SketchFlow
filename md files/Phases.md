@@ -33,7 +33,7 @@ Express.js  Socket.IO
 
 | Table | Key Columns | Relationships |
 |---|---|---|
-| **users** | id (UUID PK), email, name, password_hash, avatar_url | Creates workspaces, elements, tasks |
+| **users** | id (UUID PK), email, name, password_hash, avatar_url, reset_token_hash, reset_token_expires_at | Creates workspaces, elements, tasks |
 | **workspaces** | id (UUID PK), name, description, created_by (FK→users) | Has many boards, members |
 | **workspace_members** | workspace_id + user_id (composite PK), role (admin/editor/viewer), invited_by (FK→users) | Join table |
 | **boards** | id (UUID PK), name, workspace_id (FK), created_by (FK) | Has many elements, tasks, messages, files |
@@ -56,6 +56,7 @@ board:events:{boardId}            → List [event1, event2...]  [TTL: 60s]
 board:state:{boardId}             → JSON { elements: [...] }  [TTL: 5s]
 rate:board:{boardId}:{userId}     → Counter                   [TTL: 1s, max: 15]
 session:{sessionId}               → JSON { userId }
+refresh:{userId}                  → String refreshToken       [TTL: 30d]
 ```
 
 ---
@@ -213,6 +214,7 @@ This is what we'll build first. It establishes the entire project skeleton and t
 #### [NEW] [src/db/migrations/001_initial_schema.sql](file:///d:/Desktop/Projects/SketchFlow/server/src/db/migrations/001_initial_schema.sql)
 - Enable `uuid-ossp` extension
 - Create all 10 tables with proper constraints, indexes, and foreign keys
+- **Users table** includes `reset_token_hash VARCHAR(255)` and `reset_token_expires_at TIMESTAMP` for password reset flow (stored as hash, not plaintext)
 - Add indexes on: `workspace_members(user_id)`, `boards(workspace_id)`, `elements(board_id, deleted_at)`, `tasks(board_id, assignee_id)`, `chat_messages(board_id)`, `files(board_id)`, `activity_logs(board_id, created_at)`
 - Add CHECK constraints for enums (role, element type, task status, priority, action)
 
@@ -259,18 +261,42 @@ This is what we'll build first. It establishes the entire project skeleton and t
 
 #### [NEW] [src/modules/auth/auth.service.js](file:///d:/Desktop/Projects/SketchFlow/server/src/modules/auth/auth.service.js)
 - `register(name, email, password)` → hash password (bcryptjs), insert user, return token pair
-- `login(email, password)` → verify credentials, return token pair
+- `login(email, password)` → verify credentials, return token pair, **store refresh token in Redis** (`refresh:{userId}`, TTL 30d)
 - `generateTokens(userId)` → returns `{ accessToken (15min), refreshToken (30d) }`
-- `refreshToken(refreshToken)` → verify refresh token, issue new access token
-- `forgotPassword(email)` → generate reset token (crypto.randomBytes), store hash in DB with 1hr expiry, send email
-- `resetPassword(token, newPassword)` → verify token, hash new password, update user
-- `logout()` → (stateless, but endpoint exists for frontend cleanup)
+- `refreshToken(refreshToken)` → verify JWT, **validate against Redis** (`refresh:{userId}`), issue new access token + rotate refresh token
+- `forgotPassword(email)` → generate reset token (crypto.randomBytes), **store SHA-256 hash** in `users.reset_token_hash` with 1hr expiry in `users.reset_token_expires_at`, send email with plaintext token
+- `resetPassword(token, newPassword)` → hash submitted token, compare against stored `reset_token_hash`, verify expiry, update password, **clear reset token fields**
+- `logout(userId)` → **delete refresh token from Redis** (`redis.del('refresh:${userId}')`), clear refresh token cookie
+
+**Refresh token cookie** (set on login, refresh, cleared on logout):
+```javascript
+res.cookie('refreshToken', refreshToken, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict',
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+  path: '/api/auth'  // Only sent to auth endpoints
+});
+```
+
+**Refresh token Redis validation** (on every refresh):
+```javascript
+// On login/register:
+await redis.setex(`refresh:${userId}`, 30 * 24 * 60 * 60, refreshToken);
+
+// On refresh:
+const stored = await redis.get(`refresh:${userId}`);
+if (stored !== refreshToken) throw new ApiError(401, 'Invalid refresh token');
+
+// On logout:
+await redis.del(`refresh:${userId}`);
+```
 
 #### [NEW] [src/modules/auth/auth.controller.js](file:///d:/Desktop/Projects/SketchFlow/server/src/modules/auth/auth.controller.js)
-- `POST /api/auth/register` → register user (rate limited: auth limiter)
-- `POST /api/auth/login` → authenticate user (rate limited: auth limiter)
-- `POST /api/auth/refresh` → refresh access token
-- `POST /api/auth/logout` → clear refresh token cookie
+- `POST /api/auth/register` → register user, set refresh token httpOnly cookie (rate limited: auth limiter)
+- `POST /api/auth/login` → authenticate user, set refresh token httpOnly cookie (rate limited: auth limiter)
+- `POST /api/auth/refresh` → read refresh token **from httpOnly cookie** (not header), validate against Redis, issue new access token + rotate refresh token cookie
+- `POST /api/auth/logout` → **delete refresh token from Redis** + clear httpOnly cookie
 - `POST /api/auth/forgot-password` → send reset email (rate limited: password reset limiter)
 - `POST /api/auth/reset-password` → reset password with token
 - `GET /api/auth/me` → return current user profile (requires auth)
@@ -407,6 +433,25 @@ This is what we'll build first. It establishes the entire project skeleton and t
 #### [NEW] [src/sockets/eventLog.js](file:///d:/Desktop/Projects/SketchFlow/server/src/sockets/eventLog.js)
 - After every board event → `RPUSH board:events:{boardId}` with 60s TTL
 - `events:replay` → on reconnection, client sends last event timestamp → replay from Redis list
+- **Fallback for >60s disconnections**: if Redis list is empty/expired, fetch full board state from DB and emit `board:state:sync`
+
+```javascript
+// Event replay with DB fallback
+socket.on('events:replay', async ({ boardId, since }) => {
+  // 1. Try Redis list first (60s TTL)
+  const events = await redis.lrange(`board:events:${boardId}`, 0, -1);
+  const parsed = events.map(e => JSON.parse(e));
+  const filtered = parsed.filter(e => e.timestamp > since);
+
+  if (filtered.length > 0) {
+    socket.emit('events:replayed', filtered);
+  } else {
+    // 2. Fallback: fetch full board state from DB
+    const elements = await elementService.getByBoardId(boardId);
+    socket.emit('board:state:sync', elements);
+  }
+});
+```
 
 ---
 
@@ -485,12 +530,22 @@ This is what we'll build first. It establishes the entire project skeleton and t
 
 ---
 
-### Phase 6: Cron Jobs + Production Hardening
+### Phase 6: Cron Jobs + Production Hardening + DevOps
 
 #### [NEW] [src/jobs/cron.js](file:///d:/Desktop/Projects/SketchFlow/server/src/jobs/cron.js)
-- **Hourly**: Cleanup stale element locks from Redis (scan `lock:element:*`)
+- ~~**Hourly**: Cleanup stale element locks from Redis~~ → **Removed**: TTL auto-expires locks; Redis SCAN is slow on large datasets and unnecessary here
 - **Daily**: Delete activity logs older than 90 days
-- **Hourly**: Remove expired workspace invites
+- **Hourly**: Delete expired invite tokens from DB (workspace_members with pending invites)
+
+#### [NEW] Docker Setup
+- `docker-compose.yml` — PostgreSQL + Redis for local development
+- `Dockerfile` — Multi-stage build for production deployment
+- `.dockerignore` — Exclude node_modules, .env, etc.
+
+#### [NEW] API Documentation
+- Postman collection export with all endpoints grouped by module
+- Environment variables template for Postman
+- Example request/response bodies for developer onboarding
 
 ---
 
@@ -511,13 +566,24 @@ This is what we'll build first. It establishes the entire project skeleton and t
 > [!IMPORTANT]
 > **Execution approach**: I plan to build this incrementally — starting with Phase 1 (project setup + auth + users), then proceeding through each phase. This means the backend will be functional and testable after each phase. Does this approach work for you?
 
-## Open Questions
+## Resolved Design Decisions
 
 > [!NOTE]
-> **Invite system**: The ERD shows `invited_by` on workspace_members. Should invites require an email link workflow (send invite → click link → join), or is it simpler to add members directly by email (search → add → they see it on their dashboard)?
+> **Invite system** — ✅ Resolved: Support **both** patterns:
+> - **Direct add** (`POST /api/workspaces/:id/members`) — adds user immediately if they exist in the system
+> - **Invite link** (`POST /api/workspaces/:id/invite`) — generates token, sends email, user clicks link to join (with configurable expiry)
 
 > [!NOTE]
-> **Task status flow**: The ERD shows statuses `todo`, `in_progress`, `review`, `done`. Should status transitions be enforced (e.g., todo → in_progress → review → done), or can any status be set freely?
+> **Task status flow** — ✅ Resolved: **No enforced transitions**. Any status can be set freely (todo ↔ in_progress ↔ review ↔ done). The kanban board UI naturally encourages flow. A soft validation warning will be logged if stages are skipped (e.g., todo → done directly).
+
+> [!NOTE]
+> **Refresh token storage** — ✅ Resolved: Refresh tokens stored in **Redis** (`refresh:{userId}`, TTL 30d) for revocation support. Delivered via **httpOnly secure cookie** (not localStorage). Access token remains in Authorization header.
+
+> [!NOTE]
+> **Password reset token storage** — ✅ Resolved: Stored as **SHA-256 hash** in `users.reset_token_hash` + `users.reset_token_expires_at` columns (already in migration schema). Plaintext token sent to user via email.
+
+> [!NOTE]
+> **Cron lock cleanup** — ✅ Resolved: **Removed** Redis SCAN for lock cleanup. TTL auto-expires locks. Cron focuses on DB cleanup (expired invites, old activity logs).
 
 ---
 

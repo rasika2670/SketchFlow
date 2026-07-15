@@ -43,17 +43,9 @@ const resetPassword = {
   }),
 };
 
-const refreshToken = {
-  body: Joi.object({
-    refreshToken: Joi.string().required()
-      .messages({ 'any.required': 'Refresh token is required' }),
-  }),
-};
-
 module.exports = {
   register,
   login,
   forgotPassword,
   resetPassword,
-  refreshToken,
 };

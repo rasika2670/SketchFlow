@@ -25,12 +25,12 @@ router.post(
 
 router.post(
   '/refresh',
-  validate(authValidation.refreshToken),
   authController.refreshToken
 );
 
 router.post(
   '/logout',
+  authenticate,
   authController.logout
 );
 
