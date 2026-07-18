@@ -22,6 +22,8 @@ const ApiError = require('./utils/ApiError');
 // Route modules
 const authRoutes = require('./modules/auth/auth.routes');
 const usersRoutes = require('./modules/users/users.routes');
+const workspacesRoutes = require('./modules/workspaces/workspaces.routes');
+const { workspaceScopedRouter: boardWorkspaceRoutes, boardRouter: boardRoutes } = require('./modules/boards/boards.routes');
 
 // =============================================
 // Initialize Express App
@@ -69,6 +71,9 @@ app.get('/api/health', async (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/workspaces', workspacesRoutes);
+app.use('/api/workspaces/:workspaceId/boards', boardWorkspaceRoutes);
+app.use('/api/boards', boardRoutes);
 
 // =============================================
 // 404 Handler — Must be after all routes
