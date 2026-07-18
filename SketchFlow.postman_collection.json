@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "b3e34b5c-4f1b-4d43-85f0-8c2b7d9b9c9f",
-    "name": "SketchFlow - Phase 1 & 2",
-    "description": "Auth, User, Workspace, and Board endpoints for SketchFlow API",
+    "name": "SketchFlow - Phase 1, 2 & 3",
+    "description": "Auth, User, Workspace, Board, and Elements (Whiteboard) endpoints for SketchFlow API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -839,6 +839,263 @@
       ]
     },
     {
+      "name": "Elements",
+      "item": [
+        {
+          "name": "Create Element (sticky)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.status === 'success') {",
+                  "    pm.collectionVariables.set('elementId', jsonData.data.element.id);",
+                  "    pm.collectionVariables.set('elementVersion', jsonData.data.element.version);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"type\": \"sticky\",\n    \"x\": 100,\n    \"y\": 150,\n    \"width\": 200,\n    \"height\": 150,\n    \"color\": \"#FFD700\",\n    \"text\": \"This is a sticky note\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/boards/{{boardId}}/elements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "boards",
+                "{{boardId}}",
+                "elements"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Element (rectangle)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"type\": \"rectangle\",\n    \"x\": 300,\n    \"y\": 200,\n    \"width\": 120,\n    \"height\": 80,\n    \"color\": \"#4F46E5\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/boards/{{boardId}}/elements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "boards",
+                "{{boardId}}",
+                "elements"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Elements on Board",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/boards/{{boardId}}/elements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "boards",
+                "{{boardId}}",
+                "elements"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Element (with correct version)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.status === 'success') {",
+                  "    pm.collectionVariables.set('elementVersion', jsonData.data.element.version);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"version\": {{elementVersion}},\n    \"x\": 250,\n    \"y\": 300,\n    \"text\": \"Updated sticky note text\",\n    \"color\": \"#FF6B6B\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/elements/{{elementId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "elements",
+                "{{elementId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Element (WRONG version → 409 Conflict)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"version\": 1,\n    \"x\": 999,\n    \"y\": 999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/elements/{{elementId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "elements",
+                "{{elementId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Batch Update Positions",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"elements\": [\n        {\n            \"id\": \"{{elementId}}\",\n            \"x\": 500,\n            \"y\": 400,\n            \"version\": {{elementVersion}}\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/elements/batch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "elements",
+                "batch"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Element (soft delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/elements/{{elementId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "elements",
+                "{{elementId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "RBAC Tests",
       "item": [
         {
@@ -954,6 +1211,16 @@
     {
       "key": "boardId",
       "value": "",
+      "type": "string"
+    },
+    {
+      "key": "elementId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "elementVersion",
+      "value": "1",
       "type": "string"
     },
     {

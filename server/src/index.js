@@ -24,6 +24,10 @@ const authRoutes = require('./modules/auth/auth.routes');
 const usersRoutes = require('./modules/users/users.routes');
 const workspacesRoutes = require('./modules/workspaces/workspaces.routes');
 const { workspaceScopedRouter: boardWorkspaceRoutes, boardRouter: boardRoutes } = require('./modules/boards/boards.routes');
+const { boardScopedRouter: elementBoardRoutes, elementRouter: elementRoutes } = require('./modules/elements/elements.routes');
+
+// Socket.IO
+const { initializeSocketIO } = require('./sockets');
 
 // =============================================
 // Initialize Express App
@@ -74,6 +78,8 @@ app.use('/api/users', usersRoutes);
 app.use('/api/workspaces', workspacesRoutes);
 app.use('/api/workspaces/:workspaceId/boards', boardWorkspaceRoutes);
 app.use('/api/boards', boardRoutes);
+app.use('/api/boards/:boardId/elements', elementBoardRoutes);
+app.use('/api/elements', elementRoutes);
 
 // =============================================
 // 404 Handler — Must be after all routes
@@ -91,6 +97,11 @@ app.use(errorHandler);
 // Create HTTP Server
 // =============================================
 const server = http.createServer(app);
+
+// =============================================
+// Socket.IO Real-Time Layer
+// =============================================
+const io = initializeSocketIO(server);
 
 // =============================================
 // Start Server
@@ -125,6 +136,11 @@ async function startServer() {
 // =============================================
 function gracefulShutdown(signal) {
   logger.info(`${signal} received — shutting down gracefully...`);
+
+  // Close Socket.IO connections gracefully
+  io.close(() => {
+    logger.info('Socket.IO server closed');
+  });
 
   server.close(async () => {
     logger.info('HTTP server closed');
