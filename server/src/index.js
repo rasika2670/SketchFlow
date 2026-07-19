@@ -25,6 +25,7 @@ const usersRoutes = require('./modules/users/users.routes');
 const workspacesRoutes = require('./modules/workspaces/workspaces.routes');
 const { workspaceScopedRouter: boardWorkspaceRoutes, boardRouter: boardRoutes } = require('./modules/boards/boards.routes');
 const { boardScopedRouter: elementBoardRoutes, elementRouter: elementRoutes } = require('./modules/elements/elements.routes');
+const { boardScopedRouter: taskBoardRoutes, taskRouter: taskRoutes } = require('./modules/tasks/tasks.routes');
 
 // Socket.IO
 const { initializeSocketIO } = require('./sockets');
@@ -80,6 +81,8 @@ app.use('/api/workspaces/:workspaceId/boards', boardWorkspaceRoutes);
 app.use('/api/boards', boardRoutes);
 app.use('/api/boards/:boardId/elements', elementBoardRoutes);
 app.use('/api/elements', elementRoutes);
+app.use('/api/boards/:boardId/tasks', taskBoardRoutes);
+app.use('/api/tasks', taskRoutes);
 
 // =============================================
 // 404 Handler — Must be after all routes

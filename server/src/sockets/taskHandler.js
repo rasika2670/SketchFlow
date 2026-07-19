@@ -1,24 +1,27 @@
 const logger = require('../utils/logger');
 
 /**
- * Task handler — stub for Phase 4.
+ * Task handler — registered on each socket connection.
  *
- * In Phase 4, this handler will broadcast task events to board rooms:
- *   task:created        — New task created
+ * Task events are broadcast from REST controllers via getIO(), NOT from
+ * socket event handlers. This is because tasks are always created/mutated
+ * via REST API endpoints, which then emit to the board room.
+ *
+ * Events emitted by REST controllers:
+ *   task:created        — New task created (or converted from sticky)
  *   task:updated        — Task properties updated
- *   task:status_changed — Status transition (todo → in_progress → review → done)
- *   task:assigned       — Task assigned to a user
+ *   task:status_changed — Status transition (e.g. todo → in_progress)
+ *   task:assigned       — Task assigned/unassigned
  *   task:deleted        — Task soft deleted
  *
- * Tasks use REST endpoints for creation/mutation; this handler
- * only broadcasts the results to connected board members.
+ * This handler is kept as a registration point for any future
+ * client-initiated task events (e.g., task:subscribe, task:typing).
  *
  * @param {import('socket.io').Server} io
  * @param {import('socket.io').Socket} socket
  */
 function taskHandler(io, socket) {
-  // Phase 4 placeholder — no events registered yet
-  logger.debug('taskHandler registered (stub)', { userId: socket.userId });
+  logger.debug('taskHandler registered', { userId: socket.userId });
 }
 
 module.exports = taskHandler;

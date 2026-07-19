@@ -220,8 +220,88 @@ const requireElementBoardRole = (...allowedRoles) => {
   };
 };
 
+/**
+ * RBAC middleware for task-specific routes.
+ * Looks up task → gets board_id → gets workspace_id → checks user's role.
+ *
+ * Reads taskId from req.params.taskId.
+ * Attaches req.task, req.board, and req.membership for downstream use.
+ *
+ * @param {...string} allowedRoles - Roles permitted to access the route
+ * @returns {Function} Express middleware
+ *
+ * Usage:
+ *   router.put('/:taskId', authenticate, requireTaskBoardRole('admin', 'editor'), controller.update);
+ */
+const requireTaskBoardRole = (...allowedRoles) => {
+  return async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        throw ApiError.unauthorized('Authentication required');
+      }
+
+      const taskId = req.params.taskId;
+      if (!taskId) {
+        throw ApiError.badRequest('Task ID is required');
+      }
+
+      // Look up task to get board_id
+      const taskResult = await query(
+        'SELECT id, board_id, created_by FROM tasks WHERE id = $1 AND deleted_at IS NULL',
+        [taskId]
+      );
+
+      if (taskResult.rows.length === 0) {
+        throw ApiError.notFound('Task not found');
+      }
+
+      const task = taskResult.rows[0];
+
+      // Look up board to get workspace_id
+      const boardResult = await query(
+        'SELECT id, name, workspace_id, created_by FROM boards WHERE id = $1',
+        [task.board_id]
+      );
+
+      if (boardResult.rows.length === 0) {
+        throw ApiError.notFound('Board not found');
+      }
+
+      const board = boardResult.rows[0];
+
+      // Check user membership and role in the board's workspace
+      const memberResult = await query(
+        'SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2',
+        [board.workspace_id, userId]
+      );
+
+      if (memberResult.rows.length === 0) {
+        throw ApiError.forbidden('You are not a member of this workspace');
+      }
+
+      const { role } = memberResult.rows[0];
+
+      if (!allowedRoles.includes(role)) {
+        throw ApiError.forbidden(
+          `This action requires one of the following roles: ${allowedRoles.join(', ')}`
+        );
+      }
+
+      // Attach task, board, and membership info for downstream use
+      req.task = task;
+      req.board = board;
+      req.membership = { role, workspace_id: board.workspace_id };
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
+};
+
 module.exports = {
   requireRole,
   requireBoardRole,
   requireElementBoardRole,
+  requireTaskBoardRole,
 };
