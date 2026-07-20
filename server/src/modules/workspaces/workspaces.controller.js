@@ -124,7 +124,7 @@ const updateMemberRole = catchAsync(async (req, res) => {
  * Remove a member from the workspace (admin only).
  */
 const removeMember = catchAsync(async (req, res) => {
-  await workspacesService.removeMember(req.params.id, req.params.userId);
+  await workspacesService.removeMember(req.params.id, req.params.userId, req.user.id);
 
   res.status(204).send();
 });

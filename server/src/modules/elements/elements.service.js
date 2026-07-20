@@ -1,6 +1,7 @@
 const { query, getClient } = require('../../config/db');
 const ApiError = require('../../utils/ApiError');
 const logger = require('../../utils/logger');
+const activityService = require('../activity/activity.service');
 
 /**
  * Create a new element on a board.
@@ -26,6 +27,8 @@ async function create(userId, boardId, elementData) {
     type,
     userId,
   });
+
+  await activityService.log(boardId, userId, 'element_created', { elementId: result.rows[0].id, type });
 
   return result.rows[0];
 }
@@ -181,9 +184,10 @@ async function batchUpdate(elements) {
  * Soft delete an element by setting deleted_at.
  *
  * @param {string} elementId
+ * @param {string} userId - User making the change
  * @returns {Promise<Object>} Deleted element record
  */
-async function softDelete(elementId) {
+async function softDelete(elementId, userId) {
   const result = await query(
     `UPDATE elements
      SET deleted_at = NOW(), updated_at = NOW()
@@ -197,6 +201,8 @@ async function softDelete(elementId) {
   }
 
   logger.info('Element soft-deleted', { elementId });
+
+  await activityService.log(result.rows[0].board_id, userId, 'element_deleted', { elementId });
 
   return result.rows[0];
 }

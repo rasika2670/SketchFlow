@@ -71,7 +71,7 @@ const batchUpdate = catchAsync(async (req, res) => {
  * Soft delete an element (sets deleted_at). Requires editor or admin role.
  */
 const remove = catchAsync(async (req, res) => {
-  await elementsService.softDelete(req.params.id);
+  await elementsService.softDelete(req.params.id, req.user.id);
 
   res.status(204).send();
 });

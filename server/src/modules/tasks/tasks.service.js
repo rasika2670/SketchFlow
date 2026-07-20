@@ -1,6 +1,7 @@
 const { query, getClient } = require('../../config/db');
 const ApiError = require('../../utils/ApiError');
 const logger = require('../../utils/logger');
+const activityService = require('../activity/activity.service');
 
 /**
  * Create a new task on a board.
@@ -39,6 +40,8 @@ async function create(userId, boardId, taskData) {
     title,
     userId,
   });
+
+  await activityService.log(boardId, userId, 'task_created', { taskId: result.rows[0].id, title });
 
   return result.rows[0];
 }
@@ -300,9 +303,10 @@ async function update(taskId, updates, expectedVersion, boardId) {
  * @param {string} taskId
  * @param {string} status - New status
  * @param {number} expectedVersion
+ * @param {string} userId - User making the change
  * @returns {Promise<Object>} Updated task
  */
-async function updateStatus(taskId, status, expectedVersion) {
+async function updateStatus(taskId, status, expectedVersion, userId) {
   // Fetch current status for skip warning
   const current = await query(
     'SELECT status FROM tasks WHERE id = $1 AND deleted_at IS NULL',
@@ -350,6 +354,8 @@ async function updateStatus(taskId, status, expectedVersion) {
     newVersion: result.rows[0].version,
   });
 
+  await activityService.log(result.rows[0].board_id, userId, 'task_status_changed', { taskId, title: result.rows[0].title, from: currentStatus, to: status });
+
   return result.rows[0];
 }
 
@@ -359,9 +365,10 @@ async function updateStatus(taskId, status, expectedVersion) {
  * @param {string} taskId
  * @param {string|null} assigneeId - User ID or null to unassign
  * @param {number} expectedVersion
+ * @param {string} userId - User making the change
  * @returns {Promise<Object>} Updated task
  */
-async function assignTask(taskId, assigneeId, expectedVersion) {
+async function assignTask(taskId, assigneeId, expectedVersion, userId) {
   // If assigning (not unassigning), validate user exists and is a workspace member
   if (assigneeId !== null) {
     const taskBoardId = await getTaskBoardId(taskId);
@@ -396,6 +403,8 @@ async function assignTask(taskId, assigneeId, expectedVersion) {
     assigneeId,
     newVersion: result.rows[0].version,
   });
+
+  await activityService.log(result.rows[0].board_id, userId, 'task_assigned', { taskId, title: result.rows[0].title, assigneeId });
 
   return result.rows[0];
 }

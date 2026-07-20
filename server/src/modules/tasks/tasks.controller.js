@@ -120,7 +120,7 @@ const update = catchAsync(async (req, res) => {
 const updateStatus = catchAsync(async (req, res) => {
   const { status, version } = req.body;
 
-  const task = await tasksService.updateStatus(req.params.taskId, status, version);
+  const task = await tasksService.updateStatus(req.params.taskId, status, version, req.user.id);
 
   // Broadcast to board room via Socket.IO
   const io = getIO();
@@ -145,7 +145,7 @@ const updateStatus = catchAsync(async (req, res) => {
 const assignTask = catchAsync(async (req, res) => {
   const { assignee_id, version } = req.body;
 
-  const task = await tasksService.assignTask(req.params.taskId, assignee_id, version);
+  const task = await tasksService.assignTask(req.params.taskId, assignee_id, version, req.user.id);
 
   // Broadcast to board room via Socket.IO
   const io = getIO();

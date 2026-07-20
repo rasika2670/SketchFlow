@@ -2,6 +2,7 @@ const { query, getClient } = require('../../config/db');
 const ApiError = require('../../utils/ApiError');
 const logger = require('../../utils/logger');
 const { sendEmail } = require('../../services/email.service');
+const activityService = require('../activity/activity.service');
 
 /**
  * Create a new workspace.
@@ -233,6 +234,8 @@ async function inviteMember(workspaceId, email, role, invitedBy) {
 
   logger.info('Member invited to workspace', { workspaceId, userId: user.id, role });
 
+  await activityService.log(null, invitedBy, 'member_joined', { workspaceId, userId: user.id, role }, workspaceId);
+
   return {
     workspace_id: workspaceId,
     user_id: user.id,
@@ -247,8 +250,9 @@ async function inviteMember(workspaceId, email, role, invitedBy) {
  *
  * @param {string} workspaceId
  * @param {string} userId - ID of the member to remove
+ * @param {string} removedBy - ID of the user removing the member
  */
-async function removeMember(workspaceId, userId) {
+async function removeMember(workspaceId, userId, removedBy) {
   // Check if the user is a member
   const memberResult = await query(
     'SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2',
@@ -282,6 +286,8 @@ async function removeMember(workspaceId, userId) {
   );
 
   logger.info('Member removed from workspace', { workspaceId, userId });
+
+  await activityService.log(null, removedBy, 'member_removed', { workspaceId, userId }, workspaceId);
 }
 
 /**
