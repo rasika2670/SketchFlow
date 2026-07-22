@@ -16,24 +16,24 @@ boardScopedRouter.use(authenticate);
 // Convert sticky → task — must come BEFORE generic POST / to avoid route collision
 boardScopedRouter.post(
   '/convert',
-  validate(tasksValidation.convertFromSticky),
   requireBoardRole('admin', 'editor'),
+  validate(tasksValidation.convertFromSticky),
   tasksController.convertFromSticky
 );
 
 // Create task — editors and admins only
 boardScopedRouter.post(
   '/',
-  validate(tasksValidation.create),
   requireBoardRole('admin', 'editor'),
+  validate(tasksValidation.create),
   tasksController.create
 );
 
 // List tasks with optional filters — all workspace members
 boardScopedRouter.get(
   '/',
-  validate({ ...tasksValidation.boardIdParam, ...tasksValidation.listFilters }),
   requireBoardRole('admin', 'editor', 'viewer'),
+  validate({ ...tasksValidation.boardIdParam, ...tasksValidation.listFilters }),
   tasksController.getByBoard
 );
 

@@ -96,7 +96,11 @@ const requireBoardRole = (...allowedRoles) => {
         throw ApiError.unauthorized('Authentication required');
       }
 
-      const boardId = req.params.id;
+      const boardId =
+        req.params.boardId ||
+        req.params.id ||
+        req.body?.board_id;
+
       if (!boardId) {
         throw ApiError.badRequest('Board ID is required');
       }
@@ -162,7 +166,7 @@ const requireElementBoardRole = (...allowedRoles) => {
         throw ApiError.unauthorized('Authentication required');
       }
 
-      const elementId = req.params.id;
+      const elementId = req.params.elementId || req.params.id;
       if (!elementId) {
         throw ApiError.badRequest('Element ID is required');
       }

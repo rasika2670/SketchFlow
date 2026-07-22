@@ -16,16 +16,16 @@ boardScopedRouter.use(authenticate);
 // Create element — editors and admins only
 boardScopedRouter.post(
   '/',
-  validate(elementsValidation.create),
   requireBoardRole('admin', 'editor'),
+  validate(elementsValidation.create),
   elementsController.create
 );
 
 // List elements — all workspace members
 boardScopedRouter.get(
   '/',
-  validate(elementsValidation.boardIdParam),
   requireBoardRole('admin', 'editor', 'viewer'),
+  validate(elementsValidation.boardIdParam),
   elementsController.getByBoard
 );
 
