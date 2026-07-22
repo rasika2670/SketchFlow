@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sketchflow-app-prod
+    restart: always
+    env_file:
+      - .env.production  # Load all env vars from file
+    environment:
+      # Override specific vars if needed (but .env.production should have these)
+      PORT: 5000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-prod:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis-prod:6379
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres-prod:
+        condition: service_healthy
+      redis-prod:
+        condition: service_healthy
+    networks:
+      - sketchflow-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  postgres-prod:
+    image: postgres:15-alpine
+    container_name: sketchflow-db-prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-sketchflow}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    networks:
+      - sketchflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # No host ports exposed - secure private connection inside bridge network
+
+  redis-prod:
+    image: redis:7-alpine
+    container_name: sketchflow-redis-prod
+    restart: always
+    command: redis-server --appendonly yes --appendfsync everysec
+    volumes:
+      - redis_data_prod:/data
+    networks:
+      - sketchflow-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # No host ports exposed - secure private connection inside bridge network
+
+volumes:
+  postgres_data_prod:
+    driver: local
+  redis_data_prod:
+    driver: local
+
+networks:
+  sketchflow-network:
+    driver: bridge

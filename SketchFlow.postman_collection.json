@@ -2016,6 +2016,16 @@
       "key": "taskVersion",
       "value": "1",
       "type": "string"
+    },
+    {
+      "key": "messageId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "fileId",
+      "value": "",
+      "type": "string"
     }
   ]
 }

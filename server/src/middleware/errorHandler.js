@@ -63,11 +63,13 @@ const errorHandler = (err, req, res, next) => {
       stack: err.stack,
       path: req.originalUrl,
       method: req.method,
+      correlationId: req.id,
     });
   } else {
     logger.warn(`${statusCode} — ${message}`, {
       path: req.originalUrl,
       method: req.method,
+      correlationId: req.id,
     });
   }
 

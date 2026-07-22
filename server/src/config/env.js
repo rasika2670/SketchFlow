@@ -32,6 +32,8 @@ const DEFAULTS = {
   SMTP_USER: '',
   SMTP_PASS: '',
   EMAIL_FROM: 'SketchFlow <noreply@sketchflow.com>',
+  ACTIVITY_LOG_RETENTION_DAYS: '90',
+  MEMORY_WARNING_THRESHOLD_PERCENT: '80',
 };
 
 /**
@@ -87,6 +89,11 @@ const config = {
     user: process.env.SMTP_USER || DEFAULTS.SMTP_USER,
     pass: process.env.SMTP_PASS || DEFAULTS.SMTP_PASS,
     from: process.env.EMAIL_FROM || DEFAULTS.EMAIL_FROM,
+  },
+
+  jobs: {
+    activityLogRetentionDays: parseInt(process.env.ACTIVITY_LOG_RETENTION_DAYS || DEFAULTS.ACTIVITY_LOG_RETENTION_DAYS, 10),
+    memoryWarningThresholdPercent: parseInt(process.env.MEMORY_WARNING_THRESHOLD_PERCENT || DEFAULTS.MEMORY_WARNING_THRESHOLD_PERCENT, 10),
   },
 };
 

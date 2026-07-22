@@ -17,6 +17,7 @@ const logger = require('./utils/logger');
 // Middleware
 const errorHandler = require('./middleware/errorHandler');
 const { generalLimiter } = require('./middleware/rateLimiter');
+const correlationId = require('./middleware/correlationId');
 const ApiError = require('./utils/ApiError');
 
 // Route modules
@@ -38,6 +39,9 @@ const { initializeSocketIO } = require('./sockets');
 // =============================================
 const app = express();
 
+// ---- Correlation ID ----
+app.use(correlationId);
+
 // ---- Security & Parsing Middleware ----
 app.use(helmet());
 app.use(cors(corsOptions));
@@ -46,7 +50,12 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // ---- Request Logging ----
-app.use(morgan(config.isProduction ? 'combined' : 'dev'));
+if (config.isProduction) {
+  morgan.token('correlation-id', (req) => req.id || '-');
+  app.use(morgan(':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] - :correlation-id'));
+} else {
+  app.use(morgan('dev'));
+}
 
 // ---- Rate Limiting ----
 app.use('/api', generalLimiter);
@@ -127,7 +136,10 @@ async function startServer() {
     configureCloudinary();
     initializeEmailService();
 
-    // 4. Start listening
+    // 4. Start cron jobs
+    require('./jobs/cron');
+
+    // 5. Start listening
     server.listen(config.port, () => {
       logger.info(`🚀 SketchFlow API running on port ${config.port}`, {
         env: config.nodeEnv,

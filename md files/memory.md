@@ -1,17 +1,22 @@
 # SketchFlow — Project Memory & Status
 
 ## 🟢 Current Status
-**Phase 4 (Tasks + Sticky Note Conversion) is 100% COMPLETE.**
-We are currently at the boundary between Phase 4 and Phase 5. The next step is to begin Phase 5 (Chat + Files + Activity Logging).
+**Phase 6 (Cron Jobs, Hardening, DevOps) is 100% COMPLETE.**
+🎉 **ALL BACKEND PHASES (1 to 6) ARE FULLY IMPLEMENTED, HARDENED, AND VERIFIED.**
 
-## 📁 Files Created/Modified in Phase 4
-- `server/src/modules/tasks/tasks.validation.js` (NEW — Joi schemas for all task operations)
-- `server/src/modules/tasks/tasks.service.js` (NEW — CRUD + convertFromSticky transaction + optimistic locking + filtering)
-- `server/src/modules/tasks/tasks.controller.js` (NEW — 8 endpoint handlers with Socket.IO broadcasting)
-- `server/src/modules/tasks/tasks.routes.js` (NEW — Board-scoped + task-specific routers)
-- `server/src/middleware/rbac.js` (MODIFIED — Added requireTaskBoardRole)
-- `server/src/sockets/taskHandler.js` (MODIFIED — Replaced stub with documented no-op; broadcasting from controllers)
-- `server/src/index.js` (MODIFIED — Added task route mounts)
+## 📁 Files Created/Modified in Phase 6
+- `server/src/jobs/cron.js` (NEW — Configurable cron manager for activity log retention, expired invite cleanups, and 15-min heap memory audits)
+- `server/src/utils/als.js` (NEW — AsyncLocalStorage utility for request-scoped state)
+- `server/src/middleware/correlationId.js` (NEW — Correlation ID middleware propagating `x-correlation-id`)
+- `server/Dockerfile` (NEW — Multi-stage Dockerfile optimized with `npm ci --omit=dev`)
+- `server/.dockerignore` (NEW — Build context filtering file)
+- `server/docker-compose.yml` (NEW — Development Docker Compose with mapped ports)
+- `server/docker-compose.prod.yml` (NEW — Production Docker Compose with isolated private network)
+- `server/src/utils/logger.js` (MODIFIED — Integrated AsyncLocalStorage correlation ID in Winston logs format)
+- `server/src/middleware/errorHandler.js` (MODIFIED — Logged correlation IDs on warnings/errors)
+- `server/src/config/env.js` (MODIFIED — Added `ACTIVITY_LOG_RETENTION_DAYS` & `MEMORY_WARNING_THRESHOLD_PERCENT`)
+- `server/.env` & `server/.env.example` (MODIFIED — Updated with Phase 6 environment variables)
+- `server/src/index.js` (MODIFIED — Mounted correlation ID middleware, Morgan production token, and cron initialization)
 
 ## ✅ What Has Been Completed (Phase 1)
 1. **Project Skeleton**: Express setup, routing structure, error handling, structured logging (Winston).
@@ -105,15 +110,35 @@ We are currently at the boundary between Phase 4 and Phase 5. The next step is t
    - Free-form (any status → any status). No workflow enforcement.
    - Soft warning logged when stages are skipped (e.g., todo → done).
 
-## 🚀 Next Up (Phase 5 — Chat + Files + Activity Logging)
-- Create `chat.validation.js`, `chat.service.js`, `chat.controller.js`, `chat.routes.js`.
-- Implement cursor-based pagination for chat messages.
-- Implement threaded replies (parent_id).
-- Complete `chatHandler.js` stub for real-time chat events.
-- Create `files.validation.js`, `files.service.js`, `files.controller.js`, `files.routes.js`.
-- Implement Cloudinary upload signature and file metadata registration.
-- Create `activity.service.js`, `activity.controller.js`, `activity.routes.js`.
-- Implement activity logging across task and file operations.
+## ✅ What Has Been Completed (Phase 5)
+1. **Chat Module** (`chat.validation.js`, `chat.service.js`, `chat.controller.js`, `chat.routes.js`):
+   - Real-time chat messaging with edit and soft-delete capabilities.
+   - Composite cursor-based pagination `(created_at, id)` to prevent pagination issues when multiple items share timestamps.
+   - Socket.IO broadcasting for `chat:new_message`, `chat:updated`, and `chat:deleted` to sync client UIs.
+2. **Files Module** (`files.validation.js`, `files.service.js`, `files.controller.js`, `files.routes.js`):
+   - Secure Cloudinary upload signature generation (`api_sign_request`).
+   - File metadata registration on SQL (`files` table).
+   - Deletion cleanup in Cloudinary + SQL, with Socket.IO `file:deleted` event synchronization.
+3. **Activity Logging Module** (`activity.service.js`, `activity.controller.js`, `activity.routes.js`):
+   - General-purpose auditing backend tracking board and workspace events.
+   - Schema upgraded to make `board_id` nullable and include `workspace_id` to allow workspace-level audits.
+   - Broad integration logging elements (`element_created`, `element_deleted`), files (`file_uploaded`, `file_deleted`), members (`member_joined`, `member_removed`), and tasks (`task_created`, `task_status_changed`, `task_assigned`).
+
+## ✅ What Has Been Completed (Phase 6)
+1. **Cron Manager** (`jobs/cron.js`):
+   - Daily activity log retention purges based on `ACTIVITY_LOG_RETENTION_DAYS` (default: 90 days).
+   - Hourly try-catch purges of expired invite tokens.
+   - 15-minute V8 heap memory usage audits with configurable percentage threshold warnings (`MEMORY_WARNING_THRESHOLD_PERCENT`, default: 80%).
+2. **Correlation ID & Tracing** (`als.js`, `correlationId.js`, `logger.js`, `errorHandler.js`):
+   - `AsyncLocalStorage` request-context propagation for correlation IDs across async calls.
+   - Automatic injection of `correlationId` into Winston logs and Morgan request logs.
+3. **Containerization & Hardening** (`Dockerfile`, `.dockerignore`, `docker-compose.yml`, `docker-compose.prod.yml`):
+   - Multi-stage Docker build utilizing `npm ci --omit=dev`.
+   - Dedicated local dev Docker Compose (public ports) vs production Docker Compose (isolated private DB/Redis network).
+
+## 🚀 Next Up (Frontend Integration & Deployment)
+- Connect React/Vite frontend application to the API endpoints and Socket.IO real-time layer.
+- Execute full system integration testing.
 
 ## 📌 Important Context & Decisions
 - **Database**: PostgreSQL (running locally or via Cloud/Neon). Connection via `DATABASE_URL`.
@@ -133,12 +158,18 @@ We are currently at the boundary between Phase 4 and Phase 5. The next step is t
 - **Assignee Validation**: Assignee must be a workspace member (validated via boards → workspace_members join).
 - **Presence Delay**: 30s cleanup delay prevents flickering. Timer cancelled if user reconnects.
 - **Lock Expiry**: TTL-based (30s). Natural expiry recovery: next SETNX attempt succeeds + broadcasts new lock.
+- **Composite Cursor Pagination**: Keyset pagination on `(created_at, id)` implemented for robust, skip-free message and activity paging.
+- **Chat Soft Deletion**: Updating a message changes database values; deleting a message applies `deleted_at = NOW()` instead of physical row pruning.
+- **Cloudinary Orchestration**: Direct-to-Cloudinary frontend uploads signed using `cloudinary.utils.api_sign_request` on the backend, tracking metadata in SQL.
+- **Dynamic Activity Auditing**: `activity_logs` table altered to dynamically handle board-level (with `board_id`) and workspace-level (with `workspace_id`) events (such as member changes).
+- **AsyncLocalStorage Correlation Tracing**: Incoming requests generate a UUID `x-correlation-id` which is transparently attached to every log statement via Winston custom formats without manual parameter passing.
+- **Configurable Heap Auditing**: Memory monitor tracks `v8.getHeapStatistics().used_heap_size` against `heap_size_limit` and logs warnings when heap usage crosses the configured threshold.
+- **Isolated Production Networking**: `docker-compose.prod.yml` keeps database and cache container ports unexposed to external networks.
 
 ## 📁 Files Currently/Recently Worked On
-- `server/src/modules/tasks/tasks.validation.js` (NEW — Joi schemas for all task operations)
-- `server/src/modules/tasks/tasks.service.js` (NEW — CRUD + convertFromSticky + optimistic locking)
-- `server/src/modules/tasks/tasks.controller.js` (NEW — 8 endpoint handlers + Socket.IO broadcasting)
-- `server/src/modules/tasks/tasks.routes.js` (NEW — Board-scoped + task-specific routers)
-- `server/src/middleware/rbac.js` (MODIFIED — Added requireTaskBoardRole)
-- `server/src/sockets/taskHandler.js` (MODIFIED — Replaced stub)
-- `server/src/index.js` (MODIFIED — Added task route mounts)
+- `server/src/jobs/cron.js` (NEW — Cron jobs manager)
+- `server/src/utils/als.js` & `src/middleware/correlationId.js` (NEW — Correlation ID infrastructure)
+- `server/Dockerfile`, `docker-compose.yml`, `docker-compose.prod.yml`, `.dockerignore` (NEW — Docker deployment files)
+- `server/src/utils/logger.js` & `src/middleware/errorHandler.js` (MODIFIED — Tracing updates)
+- `server/src/config/env.js`, `.env`, `.env.example` (MODIFIED — Config updates)
+- `server/src/index.js` (MODIFIED — Integrated Phase 6 middleware & cron runner)

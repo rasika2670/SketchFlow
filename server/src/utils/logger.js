@@ -1,7 +1,19 @@
 const winston = require('winston');
 const path = require('path');
+const asyncLocalStorage = require('./als');
 
 const { combine, timestamp, printf, colorize, errors, json } = winston.format;
+
+/**
+ * Winston format middleware to inject correlationId from AsyncLocalStorage.
+ */
+const addCorrelationId = winston.format((info) => {
+  const id = asyncLocalStorage.getStore();
+  if (id) {
+    info.correlationId = id;
+  }
+  return info;
+});
 
 /**
  * Custom format for development console output.
@@ -19,6 +31,7 @@ const devFormat = printf(({ level, message, timestamp: ts, ...meta }) => {
 const logger = winston.createLogger({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   format: combine(
+    addCorrelationId(),
     errors({ stack: true }),
     timestamp({ format: 'YYYY-MM-DD HH:mm:ss' })
   ),
