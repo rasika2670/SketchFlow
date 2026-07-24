@@ -1,9 +1,123 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [],
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  darkMode: 'class',
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        primary: {
+          50: '#F4F0FF',
+          100: '#E8E0FA',
+          200: '#D1C4F0',
+          300: '#B8A6E8',
+          400: '#9E84DF',
+          500: '#6E56CF',
+          600: '#5C44B8',
+          700: '#4A359A',
+          800: '#38277C',
+          900: '#261A5E',
+        },
+        slate: {
+          50: '#F4F4FC',
+          100: '#D4D4E8',
+          200: '#B0B0C8',
+          300: '#81819A',
+          400: '#5C5C72',
+          500: '#3F3F50',
+          600: '#2E2E3C',
+          700: '#242430',
+          800: '#1A1A24',
+          900: '#111118',
+          950: '#0A0A0F',
+        },
+        accent: '#38BDF8',
+        success: '#34D399',
+        warning: '#FBBF24',
+        error: '#FB7185',
+      },
+      backgroundColor: {
+        'sf-canvas': '#0A0A0F',
+        'sf-deep': '#111118',
+        'sf-raised': '#1A1A24',
+        'sf-overlay': 'rgba(26, 26, 36, 0.8)',
+      },
+      borderColor: {
+        'sf-default': '#242430',
+        'sf-hover': '#3F3F50',
+        'sf-active': '#6E56CF',
+      },
+      textColor: {
+        'sf-primary': '#F4F4FC',
+        'sf-secondary': '#81819A',
+        'sf-muted': '#3F3F50',
+      },
+      spacing: {
+        'sf-1': '4px',
+        'sf-2': '8px',
+        'sf-3': '12px',
+        'sf-4': '16px',
+        'sf-5': '20px',
+        'sf-6': '24px',
+        'sf-8': '32px',
+        'sf-10': '40px',
+        'sf-12': '48px',
+        'sf-16': '64px',
+      },
+      borderRadius: {
+        'sf-sm': '4px',
+        'sf-md': '8px',
+        'sf-lg': '12px',
+        'sf-pill': '9999px',
+      },
+      boxShadow: {
+        'sf-raised': '0 1px 2px rgba(0,0,10,0.4)',
+        'sf-overlay': '0 4px 12px rgba(0,0,10,0.5)',
+        'sf-floating': '0 8px 24px rgba(0,0,10,0.6), inset 0 0 0 1px rgba(255,255,255,0.05)',
+        'sf-drag': '0 16px 48px rgba(0,0,10,0.8)',
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      },
+      fontSize: {
+        'sf-xs': ['12px', { lineHeight: '16px' }],
+        'sf-sm': ['13px', { lineHeight: '20px' }],
+        'sf-base': ['14px', { lineHeight: '22px' }],
+        'sf-lg': ['16px', { lineHeight: '24px' }],
+        'sf-xl': ['20px', { lineHeight: '28px' }],
+        'sf-2xl': ['24px', { lineHeight: '32px' }],
+        'sf-3xl': ['30px', { lineHeight: '36px' }],
+      },
+      transitionDuration: {
+        'sf-fast': '120ms',
+        'sf-normal': '200ms',
+        'sf-slow': '300ms',
+      },
+      keyframes: {
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        'slide-up': {
+          '0%': { opacity: '0', transform: 'translateY(20px) scale(0.98)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        'slide-in-right': {
+          '0%': { opacity: '0', transform: 'translateX(40px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
+        'spin-slow': {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
+      },
+      animation: {
+        'fade-in': 'fade-in 200ms cubic-bezier(0, 0, 0.2, 1)',
+        'slide-up': 'slide-up 200ms cubic-bezier(0.4, 0, 0.2, 1)',
+        'slide-in-right': 'slide-in-right 200ms cubic-bezier(0, 0, 0.2, 1)',
+        'spin-slow': 'spin-slow 1.5s linear infinite',
+      },
+    },
   },
   plugins: [],
-}
-
+};

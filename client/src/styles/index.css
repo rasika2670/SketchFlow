@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply bg-sf-canvas text-slate-50 font-sans antialiased;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  body {
+    @apply min-h-screen;
+  }
+
+  /* Custom scrollbar — thin, minimal */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-600 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-500;
+  }
+
+  /* Selection highlight */
+  ::selection {
+    @apply bg-primary-500/30 text-slate-50;
+  }
+
+  /* Focus ring for accessibility */
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary-500;
+  }
+
+  /* Remove default input styles */
+  input,
+  textarea,
+  select {
+    @apply bg-transparent;
+  }
+}
+
+@layer components {
+  /* Reusable input field style */
+  .sf-input {
+    @apply w-full bg-slate-800 border border-slate-700 rounded-sf-sm px-sf-3 py-sf-2
+           text-slate-50 text-sf-base placeholder:text-slate-400
+           focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500/30
+           transition-colors duration-sf-fast;
+  }
+
+  /* Primary button */
+  .sf-btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+           bg-primary-500 text-white font-medium
+           px-sf-4 py-sf-2 rounded-sf-sm
+           hover:bg-primary-600 active:bg-primary-700
+           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500
+           transition-colors duration-sf-fast
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Secondary / ghost button */
+  .sf-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2
+           bg-transparent text-slate-300 font-medium
+           px-sf-4 py-sf-2 rounded-sf-sm
+           border border-slate-700
+           hover:bg-slate-800 hover:text-slate-50 hover:border-slate-600
+           active:bg-slate-700
+           transition-colors duration-sf-fast
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Danger button */
+  .sf-btn-danger {
+    @apply inline-flex items-center justify-center gap-2
+           bg-error/10 text-error font-medium
+           px-sf-4 py-sf-2 rounded-sf-sm
+           border border-error/20
+           hover:bg-error/20
+           active:bg-error/30
+           transition-colors duration-sf-fast
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Card container */
+  .sf-card {
+    @apply bg-sf-raised border border-slate-700 rounded-sf-md p-sf-4
+           transition-all duration-sf-fast;
+  }
+
+  /* Label */
+  .sf-label {
+    @apply block text-sf-sm font-medium text-slate-300 mb-sf-1;
+  }
+
+  /* Error text */
+  .sf-error {
+    @apply text-sf-xs text-error mt-1;
+  }
+
+  /* Link */
+  .sf-link {
+    @apply text-primary-400 hover:text-primary-300 transition-colors duration-sf-fast cursor-pointer;
+  }
+}
