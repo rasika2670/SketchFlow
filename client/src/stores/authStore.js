@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import * as authApi from '@/api/auth.api';
 import { setAuthStoreAccessor } from '@/api/axios';
+import { connectGlobalSocket, disconnectGlobalSocket } from '@/sockets/socketManager';
 import toast from 'react-hot-toast';
 
 export const useAuthStore = create((set, get) => ({
@@ -23,12 +24,20 @@ export const useAuthStore = create((set, get) => ({
   initialize: async () => {
     try {
       set({ isLoading: true });
-      const { data } = await authApi.refresh();
+      const { data: refreshRes } = await authApi.refresh();
+      const accessToken = refreshRes.data.accessToken;
+      
+      // Update token so getMe can use it
+      set({ accessToken });
+      
+      const { data: meRes } = await authApi.getMe();
+      
       set({
-        user: data.user,
-        accessToken: data.accessToken,
+        user: meRes.data.user,
         isAuthenticated: true,
       });
+      
+      connectGlobalSocket();
     } catch {
       // No valid session — user needs to log in
       set({
@@ -46,13 +55,19 @@ export const useAuthStore = create((set, get) => ({
     set({ isLoading: true });
     try {
       const { data } = await authApi.login(email, password);
+      const user = data.data.user;
+      const accessToken = data.data.accessToken;
+      
       set({
-        user: data.user,
-        accessToken: data.accessToken,
+        user,
+        accessToken,
         isAuthenticated: true,
         isLoading: false,
       });
-      toast.success(`Welcome back, ${data.user.name}!`);
+      
+      connectGlobalSocket();
+      
+      toast.success(`Welcome back, ${user.name}!`);
       return true;
     } catch (error) {
       set({ isLoading: false });
@@ -69,11 +84,14 @@ export const useAuthStore = create((set, get) => ({
     try {
       const { data } = await authApi.register(name, email, password);
       set({
-        user: data.user,
-        accessToken: data.accessToken,
+        user: data.data.user,
+        accessToken: data.data.accessToken,
         isAuthenticated: true,
         isLoading: false,
       });
+      
+      connectGlobalSocket();
+      
       toast.success('Account created successfully!');
       return true;
     } catch (error) {
@@ -97,6 +115,7 @@ export const useAuthStore = create((set, get) => ({
         accessToken: null,
         isAuthenticated: false,
       });
+      disconnectGlobalSocket();
     }
   },
 
@@ -104,8 +123,8 @@ export const useAuthStore = create((set, get) => ({
   refreshToken: async () => {
     try {
       const { data } = await authApi.refresh();
-      set({ accessToken: data.accessToken });
-      return data.accessToken;
+      set({ accessToken: data.data.accessToken });
+      return data.data.accessToken;
     } catch (error) {
       get().logout();
       throw error;

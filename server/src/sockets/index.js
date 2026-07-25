@@ -132,6 +132,20 @@ function initializeSocketIO(httpServer) {
   io.on('connection', (socket) => {
     logger.info('Socket connected', { userId: socket.userId, socketId: socket.id });
 
+    // Automatically join a personal room for direct user messages (like notifications)
+    socket.join(socket.userId);
+
+    // Join all workspace rooms the user belongs to for real-time workspace events
+    query('SELECT workspace_id FROM workspace_members WHERE user_id = $1', [socket.userId])
+      .then((res) => {
+        res.rows.forEach((row) => {
+          socket.join(`workspace:${row.workspace_id}`);
+        });
+      })
+      .catch((err) => {
+        logger.error('Failed to join workspace rooms', { error: err.message });
+      });
+
     // Register event handlers
     boardHandler(io, socket);
     presenceHandler(io, socket);

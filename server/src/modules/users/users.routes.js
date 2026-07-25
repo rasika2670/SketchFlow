@@ -10,5 +10,6 @@ router.use(authenticate);
 router.get('/profile', usersController.getProfile);
 router.put('/profile', usersController.updateProfile);
 router.get('/search', usersController.searchUsers);
+router.get('/invites', usersController.getPendingInvites);
 
 module.exports = router;

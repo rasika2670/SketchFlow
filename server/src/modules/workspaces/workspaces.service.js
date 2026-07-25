@@ -156,16 +156,6 @@ async function remove(workspaceId) {
   logger.info('Workspace deleted', { workspaceId });
 }
 
-/**
- * Invite a member to a workspace by email.
- * The user must already exist in the system (direct add flow).
- *
- * @param {string} workspaceId
- * @param {string} email - Email of user to invite
- * @param {string} role - Role to assign ('editor' or 'viewer')
- * @param {string} invitedBy - ID of the user sending the invite
- * @returns {Promise<Object>} The new membership record with user details
- */
 async function inviteMember(workspaceId, email, role, invitedBy) {
   // Find the user by email
   const userResult = await query(
@@ -189,14 +179,24 @@ async function inviteMember(workspaceId, email, role, invitedBy) {
     throw ApiError.conflict('User is already a member of this workspace');
   }
 
-  // Add as member
-  await query(
-    `INSERT INTO workspace_members (workspace_id, user_id, role, invited_by)
-     VALUES ($1, $2, $3, $4)`,
+  // Check if already invited
+  const existingInvite = await query(
+    'SELECT id FROM workspace_invites WHERE workspace_id = $1 AND user_id = $2',
+    [workspaceId, user.id]
+  );
+
+  if (existingInvite.rows.length > 0) {
+    throw ApiError.conflict('User already has a pending invite for this workspace');
+  }
+
+  // Add as pending invite
+  const inviteResult = await query(
+    `INSERT INTO workspace_invites (workspace_id, user_id, role, invited_by)
+     VALUES ($1, $2, $3, $4) RETURNING id, created_at`,
     [workspaceId, user.id, role, invitedBy]
   );
 
-  // Get workspace name and inviter name for the email
+  // Get workspace name and inviter name for the notification
   const workspaceResult = await query(
     'SELECT name FROM workspaces WHERE id = $1',
     [workspaceId]
@@ -209,39 +209,124 @@ async function inviteMember(workspaceId, email, role, invitedBy) {
   const workspaceName = workspaceResult.rows[0]?.name || 'a workspace';
   const inviterName = inviterResult.rows[0]?.name || 'Someone';
 
-  // Send invite notification email (non-blocking — don't fail on email errors)
-  try {
-    await sendEmail({
-      to: email,
-      subject: `SketchFlow — You've been added to ${workspaceName}`,
-      html: `
-        <h2>You're in! 🎉</h2>
-        <p>Hi ${user.name},</p>
-        <p><strong>${inviterName}</strong> has added you to the workspace <strong>${workspaceName}</strong> as a <strong>${role}</strong>.</p>
-        <p>Head over to SketchFlow to start collaborating!</p>
-        <br>
-        <p>— SketchFlow Team</p>
-      `,
-    });
-  } catch (emailErr) {
-    // Non-fatal — member was added successfully even if email fails
-    logger.error('Failed to send workspace invite email', {
-      error: emailErr.message,
-      workspaceId,
-      email,
-    });
+  const inviteData = {
+    id: inviteResult.rows[0].id,
+    workspace_id: workspaceId,
+    workspace_name: workspaceName,
+    role,
+    invited_by_name: inviterName,
+    created_at: inviteResult.rows[0].created_at
+  };
+
+  // Emit real-time notification
+  const { getIO } = require('../../sockets');
+  const io = getIO();
+  if (io) {
+    io.to(user.id).emit('new_invite', inviteData);
   }
 
-  logger.info('Member invited to workspace', { workspaceId, userId: user.id, role });
+  logger.info('Invite sent', { workspaceId, userId: user.id, role });
 
-  await activityService.log(null, invitedBy, 'member_joined', { workspaceId, userId: user.id, role }, workspaceId);
+  return inviteData;
+}
 
-  return {
-    workspace_id: workspaceId,
-    user_id: user.id,
-    role,
-    user: { id: user.id, email: user.email, name: user.name, avatar_url: user.avatar_url },
-  };
+/**
+ * Accept a pending workspace invite.
+ *
+ * @param {string} inviteId
+ * @param {string} userId - ID of the user accepting
+ */
+async function acceptInvite(inviteId, userId) {
+  const client = await getClient();
+
+  try {
+    await client.query('BEGIN');
+
+    // Verify invite exists and belongs to user
+    const inviteResult = await client.query(
+      'SELECT workspace_id, role, invited_by FROM workspace_invites WHERE id = $1 AND user_id = $2',
+      [inviteId, userId]
+    );
+
+    if (inviteResult.rows.length === 0) {
+      throw ApiError.notFound('Invite not found or already processed');
+    }
+
+    const invite = inviteResult.rows[0];
+
+    // Check if already member
+    const existingMember = await client.query(
+      'SELECT user_id FROM workspace_members WHERE workspace_id = $1 AND user_id = $2',
+      [invite.workspace_id, userId]
+    );
+
+    if (existingMember.rows.length === 0) {
+      // Add as member
+      await client.query(
+        `INSERT INTO workspace_members (workspace_id, user_id, role, invited_by)
+         VALUES ($1, $2, $3, $4)`,
+        [invite.workspace_id, userId, invite.role, invite.invited_by]
+      );
+      
+      // We must fetch full user data to emit to the room
+      const uRes = await client.query('SELECT email, name, avatar_url FROM users WHERE id = $1', [userId]);
+      const newMemberData = {
+        workspace_id: invite.workspace_id,
+        user_id: userId,
+        role: invite.role,
+        joined_at: new Date().toISOString(),
+        email: uRes.rows[0].email,
+        name: uRes.rows[0].name,
+        avatar_url: uRes.rows[0].avatar_url
+      };
+
+      const { getIO } = require('../../sockets');
+      const io = getIO();
+      if (io) {
+        // Broadcast to everyone in the workspace room
+        io.to(`workspace:${invite.workspace_id}`).emit('workspace_member_joined', newMemberData);
+        // Add the new user's socket to the workspace room
+        const userSockets = await io.in(userId).fetchSockets();
+        userSockets.forEach(s => s.join(`workspace:${invite.workspace_id}`));
+      }
+    }
+
+    // Delete invite
+    await client.query(
+      'DELETE FROM workspace_invites WHERE id = $1',
+      [inviteId]
+    );
+
+    await client.query('COMMIT');
+
+    await activityService.log(null, userId, 'member_joined', { workspaceId: invite.workspace_id, userId, role: invite.role }, invite.workspace_id);
+
+    return { success: true, workspace_id: invite.workspace_id };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Decline a pending workspace invite.
+ *
+ * @param {string} inviteId
+ * @param {string} userId
+ */
+async function declineInvite(inviteId, userId) {
+  const result = await query(
+    'DELETE FROM workspace_invites WHERE id = $1 AND user_id = $2 RETURNING id',
+    [inviteId, userId]
+  );
+
+  if (result.rows.length === 0) {
+    throw ApiError.notFound('Invite not found or already processed');
+  }
+
+  return { success: true };
 }
 
 /**
@@ -284,6 +369,16 @@ async function removeMember(workspaceId, userId, removedBy) {
     'DELETE FROM workspace_members WHERE workspace_id = $1 AND user_id = $2',
     [workspaceId, userId]
   );
+
+  const { getIO } = require('../../sockets');
+  const io = getIO();
+  if (io) {
+    io.to(`workspace:${workspaceId}`).emit('workspace_member_removed', { workspace_id: workspaceId, user_id: userId });
+    
+    // Remove the user's sockets from the room
+    const userSockets = await io.in(userId).fetchSockets();
+    userSockets.forEach(s => s.leave(`workspace:${workspaceId}`));
+  }
 
   logger.info('Member removed from workspace', { workspaceId, userId });
 
@@ -342,9 +437,17 @@ async function updateMemberRole(workspaceId, userId, newRole) {
     [workspaceId, userId]
   );
 
+  const updatedMember = result.rows[0];
+
+  const { getIO } = require('../../sockets');
+  const io = getIO();
+  if (io) {
+    io.to(`workspace:${workspaceId}`).emit('workspace_member_updated', updatedMember);
+  }
+
   logger.info('Member role updated', { workspaceId, userId, from: currentRole, to: newRole });
 
-  return result.rows[0];
+  return updatedMember;
 }
 
 /**
@@ -378,4 +481,6 @@ module.exports = {
   removeMember,
   updateMemberRole,
   getMembers,
+  acceptInvite,
+  declineInvite,
 };

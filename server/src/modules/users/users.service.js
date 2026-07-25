@@ -79,8 +79,29 @@ async function searchByEmail(email, excludeUserId) {
   return result.rows;
 }
 
+/**
+ * Get pending workspace invites for a user.
+ * @param {string} userId
+ */
+async function getPendingInvites(userId) {
+  const result = await query(
+    `SELECT
+       wi.id, wi.workspace_id, wi.role, wi.created_at,
+       w.name AS workspace_name,
+       u.name AS invited_by_name
+     FROM workspace_invites wi
+     INNER JOIN workspaces w ON w.id = wi.workspace_id
+     INNER JOIN users u ON u.id = wi.invited_by
+     WHERE wi.user_id = $1
+     ORDER BY wi.created_at DESC`,
+    [userId]
+  );
+  return result.rows;
+}
+
 module.exports = {
   getById,
   updateProfile,
   searchByEmail,
+  getPendingInvites,
 };

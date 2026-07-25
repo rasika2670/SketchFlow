@@ -44,6 +44,18 @@ router.delete(
   workspacesController.remove
 );
 
+// ---- Invite Acceptance ----
+
+router.post(
+  '/invites/:inviteId/accept',
+  workspacesController.acceptInvite
+);
+
+router.post(
+  '/invites/:inviteId/decline',
+  workspacesController.declineInvite
+);
+
 // ---- Member Management ----
 
 router.post(

@@ -129,6 +129,32 @@ const removeMember = catchAsync(async (req, res) => {
   res.status(204).send();
 });
 
+/**
+ * POST /api/workspaces/invites/:inviteId/accept
+ * Accept a pending workspace invite.
+ */
+const acceptInvite = catchAsync(async (req, res) => {
+  const result = await workspacesService.acceptInvite(req.params.inviteId, req.user.id);
+
+  res.status(200).json({
+    status: 'success',
+    data: result,
+  });
+});
+
+/**
+ * POST /api/workspaces/invites/:inviteId/decline
+ * Decline a pending workspace invite.
+ */
+const declineInvite = catchAsync(async (req, res) => {
+  const result = await workspacesService.declineInvite(req.params.inviteId, req.user.id);
+
+  res.status(200).json({
+    status: 'success',
+    data: result,
+  });
+});
+
 module.exports = {
   create,
   getAll,
@@ -139,4 +165,6 @@ module.exports = {
   getMembers,
   updateMemberRole,
   removeMember,
+  acceptInvite,
+  declineInvite,
 };

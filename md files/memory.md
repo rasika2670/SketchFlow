@@ -3,6 +3,7 @@
 ## 🟢 Current Status
 **Backend Phase 6 is 100% COMPLETE.** (All Backend Phases 1-6 fully implemented, hardened, and verified).
 **Frontend Phase 1 is 100% COMPLETE.** (Setup, Tailwind config with design tokens, routing, Axios interceptors, Auth API & Zustand stores, auth pages, and shared components implemented, verified and building).
+**Frontend Phase 2 is 100% COMPLETE.** (Dashboard page, Workspace page, Board cards, API layers, Zustand stores, create/invite/settings modals, member management, breadcrumb nav, and route wiring — all building cleanly).
 
 ## 📁 Files Created/Modified in Phase 6
 - `server/src/jobs/cron.js` (NEW — Configurable cron manager for activity log retention, expired invite cleanups, and 15-min heap memory audits)
@@ -147,12 +148,23 @@
 - **App Routing & Initializer**: [AppInitializer.jsx](file:///d:/Desktop/Projects/SketchFlow/client/src/features/shared/AppInitializer.jsx) coordinates initial session checks showing branded splash screen. `ProtectedRoute` blocks unauthenticated routes. Routes defined in [routes.jsx](file:///d:/Desktop/Projects/SketchFlow/client/src/app/routes.jsx).
 - **Compilation**: Clean production build via `npm run build`.
 
+## ✅ Frontend Phase 2: Dashboard + Workspaces + Boards (100% COMPLETE)
+- **API Layer**: `workspaces.api.js` (CRUD + member management), `boards.api.js` (workspace-scoped CRUD), `users.api.js` (profile + email search).
+- **Zustand Stores**: `workspaceStore.js` (workspaces + members CRUD with toast), `boardStore.js` (boards CRUD with toast).
+- **Dashboard Page**: Top nav with SketchFlow logo, user avatar dropdown (theme toggle, logout), responsive workspace grid, `WorkspaceCard` (useNavigate, member/board counts, accent gradient hover), `CreateWorkspaceModal` (react-hook-form, name max 50, description max 200), empty state.
+- **Workspace Page**: Breadcrumb nav (Dashboard > Workspace Name), board grid with `BoardCard` (useNavigate, element/task count placeholders, relative timestamps), collapsible member sidebar (desktop + mobile overlay), `CreateBoardModal`, admin-only settings gear.
+- **Member Management**: `MemberList` with consistent `ROLE_CONFIG` color mapping (admin=indigo, editor=cyan, viewer=slate), `RoleBadge` pill component, admin-only role change dropdown + remove with `ConfirmDialog`, `InviteMemberModal` (email input designed for future debounced autocomplete, radio role selector with descriptions).
+- **Workspace Settings**: Admin-only modal with edit form (name/description) + collapsible danger zone requiring exact workspace name typing to confirm deletion.
+- **Route Updates**: Replaced `DashboardPlaceholder` with `DashboardPage`, added `/workspaces/:workspaceId` route.
+- **Compilation**: Clean production build (✓ built in 2.61s, 0 errors).
+
 ## 🚀 Next Up (Frontend Implementation)
-- Proceed with Frontend Phase 2: Dashboard + Workspaces + Boards.
-  - Implement workspace, board, and profile APIs.
-  - Build stores for workspaces and boards.
-  - Develop Workspace/Board creation modals and dashboard page layout.
-  - Implement workspace member listing, member roles, invite modals, and workspace settings.
+- Proceed with Frontend Phase 3: Infinite Canvas + Real-Time Elements.
+  - Implement elements API and canvas Zustand store.
+  - Build Socket.IO client instance and board socket hooks.
+  - Develop React-Konva canvas with element rendering (rectangles, circles, sticky notes, lines, text, images).
+  - Add toolbar, selection, zoom/pan, and canvas controls.
+  - Implement cursor overlay, lock indicators, and board header with presence avatars.
 
 ## 📌 Important Context & Decisions
 - **Database**: PostgreSQL (running locally or via Cloud/Neon). Connection via `DATABASE_URL`.
@@ -181,9 +193,18 @@
 - **Isolated Production Networking**: `docker-compose.prod.yml` keeps database and cache container ports unexposed to external networks.
 
 ## 📁 Files Currently/Recently Worked On
-- `server/src/jobs/cron.js` (NEW — Cron jobs manager)
-- `server/src/utils/als.js` & `src/middleware/correlationId.js` (NEW — Correlation ID infrastructure)
-- `server/Dockerfile`, `docker-compose.yml`, `docker-compose.prod.yml`, `.dockerignore` (NEW — Docker deployment files)
-- `server/src/utils/logger.js` & `src/middleware/errorHandler.js` (MODIFIED — Tracing updates)
-- `server/src/config/env.js`, `.env`, `.env.example` (MODIFIED — Config updates)
-- `server/src/index.js` (MODIFIED — Integrated Phase 6 middleware & cron runner)
+- `client/src/api/workspaces.api.js` (NEW — Workspace API module)
+- `client/src/api/boards.api.js` (NEW — Board API module)
+- `client/src/api/users.api.js` (NEW — Users API module)
+- `client/src/stores/workspaceStore.js` (NEW — Workspace Zustand store)
+- `client/src/stores/boardStore.js` (NEW — Board Zustand store)
+- `client/src/features/dashboard/DashboardPage.jsx` (NEW — Dashboard page with nav + workspace grid)
+- `client/src/features/dashboard/components/WorkspaceCard.jsx` (NEW — Workspace card with useNavigate)
+- `client/src/features/dashboard/components/CreateWorkspaceModal.jsx` (NEW — Create workspace modal)
+- `client/src/features/workspace/WorkspacePage.jsx` (NEW — Workspace page with board grid + member sidebar)
+- `client/src/features/workspace/components/BoardCard.jsx` (NEW — Board card with placeholder counts)
+- `client/src/features/workspace/components/CreateBoardModal.jsx` (NEW — Create board modal)
+- `client/src/features/workspace/components/MemberList.jsx` (NEW — Member list with ROLE_CONFIG colors)
+- `client/src/features/workspace/components/InviteMemberModal.jsx` (NEW — Invite member modal)
+- `client/src/features/workspace/components/WorkspaceSettings.jsx` (NEW — Settings with typed-name delete confirm)
+- `client/src/app/routes.jsx` (MODIFIED — Wired Dashboard + Workspace routes)

@@ -49,8 +49,22 @@ const searchUsers = catchAsync(async (req, res) => {
   });
 });
 
+/**
+ * GET /api/users/invites
+ * Get pending workspace invites for the authenticated user.
+ */
+const getPendingInvites = catchAsync(async (req, res) => {
+  const invites = await usersService.getPendingInvites(req.user.id);
+
+  res.status(200).json({
+    status: 'success',
+    data: { invites },
+  });
+});
+
 module.exports = {
   getProfile,
   updateProfile,
   searchUsers,
+  getPendingInvites,
 };

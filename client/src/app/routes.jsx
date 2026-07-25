@@ -6,20 +6,12 @@ import RegisterPage from '@/features/auth/RegisterPage';
 import ForgotPasswordPage from '@/features/auth/ForgotPasswordPage';
 import ResetPasswordPage from '@/features/auth/ResetPasswordPage';
 
+// Dashboard & Workspace (Phase 2)
+import DashboardPage from '@/features/dashboard/DashboardPage';
+import WorkspacePage from '@/features/workspace/WorkspacePage';
+
 // Shared
 import ProtectedRoute from '@/features/shared/ProtectedRoute';
-
-// Placeholder for protected pages (Phase 2+)
-function DashboardPlaceholder() {
-  return (
-    <div className="min-h-screen bg-sf-deep flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-sf-2xl font-bold text-slate-50 mb-sf-2">Dashboard</h1>
-        <p className="text-sf-base text-slate-400">Workspace management coming in Phase 2</p>
-      </div>
-    </div>
-  );
-}
 
 // 404 page
 function NotFoundPage() {
@@ -45,8 +37,8 @@ export default function AppRoutes() {
 
       {/* Protected routes */}
       <Route element={<ProtectedRoute />}>
-        <Route path="/" element={<DashboardPlaceholder />} />
-        {/* Phase 2: /workspaces/:workspaceId */}
+        <Route path="/" element={<DashboardPage />} />
+        <Route path="/workspaces/:workspaceId" element={<WorkspacePage />} />
         {/* Phase 3: /boards/:boardId */}
       </Route>
 
