@@ -739,7 +739,8 @@ Build the workspace management UI — the first screens users see after login.
 ---
 
 #### [NEW] [src/features/dashboard/DashboardPage.jsx](file:///d:/Desktop/Projects/SketchFlow/client/src/features/dashboard/DashboardPage.jsx)
-- Page layout: top nav (SketchFlow logo, user avatar/profile dropdown) + content area
+- Page layout: top nav (SketchFlow logo, Notifications dropdown, user avatar/profile dropdown) + content area
+- Notifications dropdown: Bell icon with badge, shows pending invites via global Socket.IO, allows accept/decline.
 - Content: responsive grid of `WorkspaceCard` components
 - "Create Workspace" button → opens `CreateWorkspaceModal`
 - Fetches workspaces on mount via `workspaceStore.fetchWorkspaces()`
@@ -777,6 +778,7 @@ Build the workspace management UI — the first screens users see after login.
 - Lists workspace members with `Avatar`, name, and role badge (`admin` = indigo, `editor` = accent, `viewer` = slate)
 - Admin actions: change role dropdown, remove member (with `ConfirmDialog`)
 - Invite button at top → opens `InviteMemberModal`
+- **Real-Time Updates**: Automatically updates when roles change, members join, or are removed (via global socket)
 
 #### [NEW] [src/features/workspace/components/InviteMemberModal.jsx](file:///d:/Desktop/Projects/SketchFlow/client/src/features/workspace/components/InviteMemberModal.jsx)
 - Uses `Modal` + `react-hook-form`
