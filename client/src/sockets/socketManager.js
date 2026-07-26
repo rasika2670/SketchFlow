@@ -4,7 +4,17 @@ import { useWorkspaceStore } from '@/stores/workspaceStore';
 
 let socket = null;
 
-const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+let SOCKET_URL = import.meta.env.VITE_WS_URL;
+
+if (!SOCKET_URL) {
+  if (import.meta.env.DEV) {
+    // In dev mode, if VITE_WS_URL is missing, default to the backend server
+    SOCKET_URL = 'http://localhost:5000';
+  } else {
+    // In production, fallback to same-origin if no specific WS URL is provided
+    SOCKET_URL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : '';
+  }
+}
 
 export const connectGlobalSocket = () => {
   if (socket) return socket;

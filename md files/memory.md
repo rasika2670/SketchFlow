@@ -4,6 +4,7 @@
 **Backend Phase 6 is 100% COMPLETE.** (All Backend Phases 1-6 fully implemented, hardened, and verified).
 **Frontend Phase 1 is 100% COMPLETE.** (Setup, Tailwind config with design tokens, routing, Axios interceptors, Auth API & Zustand stores, auth pages, and shared components implemented, verified and building).
 **Frontend Phase 2 is 100% COMPLETE.** (Dashboard page, Workspace page, Board cards, API layers, Zustand stores, create/invite/settings modals, member management, breadcrumb nav, and route wiring — all building cleanly).
+**Frontend Phase 3 is 100% COMPLETE.** (Infinite canvas with React-Konva, elements API, canvas/presence Zustand stores, board socket with real-time element CRUD, cursor presence, element locking, 7 element types, toolbar, board header with presence avatars, right sidebar shell, connection status, context menu, canvas controls — all building cleanly).
 
 ## 📁 Files Created/Modified in Phase 6
 - `server/src/jobs/cron.js` (NEW — Configurable cron manager for activity log retention, expired invite cleanups, and 15-min heap memory audits)
@@ -159,13 +160,27 @@
 - **Route Updates**: Replaced `DashboardPlaceholder` with `DashboardPage`, added `/workspaces/:workspaceId` route.
 - **Compilation**: Clean production build (✓ built in 2.61s, 0 errors).
 
+## ✅ Frontend Phase 3: Infinite Canvas + Real-Time Elements (100% COMPLETE)
+- **API Layer**: `elements.api.js` (CRUD + batch position update).
+- **Zustand Stores**: `canvasStore.js` (elements, selection, tools, zoom/pan, locks), `presenceStore.js` (online users + cursors with deterministic color assignment).
+- **Board Socket**: Separate `socket.js` (autoConnect:false, exponential backoff reconnection, token reauthentication). Coexists with global socket from `socketManager.js`.
+- **Socket Hooks**: `useBoardSocket.js` (board room join/leave + element CRUD listeners), `usePresence.js` (cursor tracking throttled at ~15 FPS in canvas coordinates, 30s heartbeat), `useLock.js` (element locking with 10s heartbeat, auto-release on unmount).
+- **Canvas Engine**: React-Konva `Canvas.jsx` with infinite pan (stage drag), zoom-toward-cursor (mouse wheel), click-to-create elements, area selection box, viewport culling (only visible elements rendered), and inline text editing via HTML textarea overlay.
+- **Element Components** (all `React.memo`): `RectangleElement`, `CircleElement`, `StickyNoteElement` (warm yellow with fold effect), `LineElement` (wide hit area), `TextElement`, `ImageElement` (async loading with native Image API + placeholder).
+- **Canvas Overlays**: `SelectionBox` (blue dashed rect), `CursorOverlay` (arrow + name pill per user), `LockIndicator` (🔒 badge), `ElementContextMenu` (edit/duplicate/color/convert-to-task/delete with batch support).
+- **Canvas Controls**: `CanvasControls.jsx` (glassmorphism zoom in/out + percentage + fit-to-screen).
+- **Board Page Layout**: `BoardPage.jsx` (orchestrates socket + canvas + layout), `BoardHeader.jsx` (glassmorphism with back nav, board name, presence avatar stack with online dots, ConnectionStatus pill), `Toolbar.jsx` (7 tools with Lucide icons + color picker), `RightSidebar.jsx` (collapsible with Tasks/Chat/Files tabs — placeholder for Phase 4/5).
+- **Connection Status**: `ConnectionStatus.jsx` (🟢/🟡/🔴 pill with click-to-reconnect), `useConnectionStatus.js` hook (toast on reconnect/disconnect).
+- **Route Wiring**: Lazy-loaded `BoardPage` at `/boards/:boardId` with Suspense fallback.
+- **Compilation**: Clean production build (✓ built in 9.99s, 0 errors, code-split BoardPage chunk at 345 KB / 105 KB gzipped).
+
 ## 🚀 Next Up (Frontend Implementation)
-- Proceed with Frontend Phase 3: Infinite Canvas + Real-Time Elements.
-  - Implement elements API and canvas Zustand store.
-  - Build Socket.IO client instance and board socket hooks.
-  - Develop React-Konva canvas with element rendering (rectangles, circles, sticky notes, lines, text, images).
-  - Add toolbar, selection, zoom/pan, and canvas controls.
-  - Implement cursor overlay, lock indicators, and board header with presence avatars.
+- Proceed with Frontend Phase 4: Task Management + Sticky Conversion.
+  - Implement tasks API, task Zustand store, and task socket hook.
+  - Build Kanban board with @dnd-kit drag-and-drop in right sidebar.
+  - Add create/edit/detail task modals.
+  - Implement sticky note → task conversion flow.
+  - Add task filters (status, assignee, priority).
 
 ## 📌 Important Context & Decisions
 - **Database**: PostgreSQL (running locally or via Cloud/Neon). Connection via `DATABASE_URL`.
@@ -191,21 +206,37 @@
 - **Dynamic Activity Auditing**: `activity_logs` table altered to dynamically handle board-level (with `board_id`) and workspace-level (with `workspace_id`) events (such as member changes).
 - **AsyncLocalStorage Correlation Tracing**: Incoming requests generate a UUID `x-correlation-id` which is transparently attached to every log statement via Winston custom formats without manual parameter passing.
 - **Configurable Heap Auditing**: Memory monitor tracks `v8.getHeapStatistics().used_heap_size` against `heap_size_limit` and logs warnings when heap usage crosses the configured threshold.
+- **Dual Socket Architecture**: Global socket (`socketManager.js`) handles workspace-level events (invites, member updates). Board socket (`sockets/socket.js`) handles canvas operations (element CRUD, presence, locking). Both coexist independently, each with its own connection lifecycle.
+- **Viewport Culling**: Canvas only renders elements whose bounding box intersects the visible viewport (computed from zoom + panOffset + container dimensions with 100px padding). Critical for performance with 100+ elements.
+- **Canvas Coordinate Conversion**: Mouse coordinates are converted to canvas space (`(screenPos / zoom) - panOffset`) before sending cursor updates, ensuring cursors align correctly across different zoom/pan levels.
+- **Image Tool (Phase 3)**: Uses `<input type="file">` + `URL.createObjectURL()` for local image preview. Object URLs will be replaced with Cloudinary URLs in Phase 5.
+- **Lazy-Loaded Board Page**: `BoardPage` is code-split via `React.lazy()` + `Suspense` to keep the main bundle lean. Canvas chunk is ~345 KB (105 KB gzipped).
 - **Isolated Production Networking**: `docker-compose.prod.yml` keeps database and cache container ports unexposed to external networks.
 
-## 📁 Files Currently/Recently Worked On
-- `client/src/api/workspaces.api.js` (NEW — Workspace API module)
-- `client/src/api/boards.api.js` (NEW — Board API module)
-- `client/src/api/users.api.js` (NEW — Users API module)
-- `client/src/stores/workspaceStore.js` (NEW — Workspace Zustand store)
-- `client/src/stores/boardStore.js` (NEW — Board Zustand store)
-- `client/src/features/dashboard/DashboardPage.jsx` (NEW — Dashboard page with nav + workspace grid)
-- `client/src/features/dashboard/components/WorkspaceCard.jsx` (NEW — Workspace card with useNavigate)
-- `client/src/features/dashboard/components/CreateWorkspaceModal.jsx` (NEW — Create workspace modal)
-- `client/src/features/workspace/WorkspacePage.jsx` (NEW — Workspace page with board grid + member sidebar)
-- `client/src/features/workspace/components/BoardCard.jsx` (NEW — Board card with placeholder counts)
-- `client/src/features/workspace/components/CreateBoardModal.jsx` (NEW — Create board modal)
-- `client/src/features/workspace/components/MemberList.jsx` (NEW — Member list with ROLE_CONFIG colors)
-- `client/src/features/workspace/components/InviteMemberModal.jsx` (NEW — Invite member modal)
-- `client/src/features/workspace/components/WorkspaceSettings.jsx` (NEW — Settings with typed-name delete confirm)
-- `client/src/app/routes.jsx` (MODIFIED — Wired Dashboard + Workspace routes)
+## 📁 Files Created/Modified in Frontend Phase 3
+- `client/src/api/elements.api.js` (NEW — Elements REST API: CRUD + batch position update)
+- `client/src/stores/canvasStore.js` (NEW — Canvas Zustand store: elements, selection, tools, zoom/pan, locks)
+- `client/src/stores/presenceStore.js` (NEW — Presence Zustand store: online users + cursors with deterministic colors)
+- `client/src/sockets/socket.js` (NEW — Board socket instance with autoConnect:false, reconnection, reauthentication)
+- `client/src/sockets/useBoardSocket.js` (NEW — Board room join/leave + element CRUD socket listeners)
+- `client/src/sockets/usePresence.js` (NEW — Cursor tracking at ~15 FPS + 30s heartbeat + presence events)
+- `client/src/sockets/useLock.js` (NEW — Element locking with 10s heartbeat + auto-release)
+- `client/src/features/canvas/Canvas.jsx` (NEW — React-Konva infinite canvas with viewport culling + inline editing)
+- `client/src/features/canvas/CanvasControls.jsx` (NEW — Glassmorphism zoom controls + fit-to-screen)
+- `client/src/features/canvas/components/RectangleElement.jsx` (NEW — Konva Rect with selection handles)
+- `client/src/features/canvas/components/CircleElement.jsx` (NEW — Konva Circle with selection handles)
+- `client/src/features/canvas/components/StickyNoteElement.jsx` (NEW — Sticky note with fold effect + editable text)
+- `client/src/features/canvas/components/LineElement.jsx` (NEW — Konva Line with wide hit area)
+- `client/src/features/canvas/components/TextElement.jsx` (NEW — Editable text with dashed selection border)
+- `client/src/features/canvas/components/ImageElement.jsx` (NEW — Async image loading with placeholder)
+- `client/src/features/canvas/components/SelectionBox.jsx` (NEW — Blue dashed selection rectangle)
+- `client/src/features/canvas/components/CursorOverlay.jsx` (NEW — Other users' cursor arrows + name pills)
+- `client/src/features/canvas/components/LockIndicator.jsx` (NEW — 🔒 badge with user name)
+- `client/src/features/canvas/components/ElementContextMenu.jsx` (NEW — Right-click menu with color picker + batch)
+- `client/src/features/board/BoardPage.jsx` (NEW — Board page orchestrating socket + canvas + layout)
+- `client/src/features/board/components/BoardHeader.jsx` (NEW — Glassmorphism header with presence avatars)
+- `client/src/features/board/components/Toolbar.jsx` (NEW — 7-tool vertical toolbar with color picker)
+- `client/src/features/board/components/RightSidebar.jsx` (NEW — Collapsible sidebar with tab nav)
+- `client/src/features/board/components/ConnectionStatus.jsx` (NEW — 🟢/🟡/🔴 connection pill)
+- `client/src/hooks/useConnectionStatus.js` (NEW — Socket event → uiStore connection status sync)
+- `client/src/app/routes.jsx` (MODIFIED — Added lazy-loaded /boards/:boardId route with Suspense)
