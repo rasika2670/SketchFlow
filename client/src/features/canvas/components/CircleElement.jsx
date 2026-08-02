@@ -12,9 +12,9 @@ const CircleElement = React.memo(function CircleElement({
   isSelected,
   lockedBy,
   onSelect,
-  onDragStart,
   onDragEnd,
   onContextMenu,
+  shapeRef,
 }) {
   const { id, x, y, width = 100, height = 100, color = '#38BDF8' } = element;
   const radius = Math.min(width, height) / 2;
@@ -39,10 +39,10 @@ const CircleElement = React.memo(function CircleElement({
   };
 
   return (
-    <Group>
+    <Group id={id} ref={shapeRef} x={x} y={y} width={width} height={height}>
       <Circle
-        x={x + radius}
-        y={y + radius}
+        x={radius}
+        y={radius}
         radius={radius}
         fill={color}
         opacity={lockedBy ? 0.6 : 1}
@@ -65,26 +65,6 @@ const CircleElement = React.memo(function CircleElement({
         shadowOffset={{ x: 0, y: 2 }}
         shadowOpacity={0.5}
       />
-      {isSelected && !lockedBy && (
-        <>
-          {[
-            { cx: x, cy: y },
-            { cx: x + width, cy: y },
-            { cx: x, cy: y + height },
-            { cx: x + width, cy: y + height },
-          ].map((pos, i) => (
-            <KonvaCircle
-              key={i}
-              x={pos.cx}
-              y={pos.cy}
-              radius={HANDLE_SIZE / 2}
-              fill="white"
-              stroke={HANDLE_COLOR}
-              strokeWidth={2}
-            />
-          ))}
-        </>
-      )}
     </Group>
   );
 });

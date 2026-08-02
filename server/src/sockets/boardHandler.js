@@ -59,7 +59,7 @@ function boardHandler(io, socket) {
   // =============================================
   // element:created
   // =============================================
-  socket.on('element:created', withBoardAuth(socket, async ({ boardId, element }) => {
+  socket.on('element:created', withBoardAuth(socket, async ({ boardId, element, tempId }) => {
     if (!element || !element.type) {
       return socket.emit('error', { message: 'element.type is required' });
     }
@@ -67,10 +67,12 @@ function boardHandler(io, socket) {
     const created = await elementsService.create(socket.userId, boardId, element);
 
     // Broadcast to everyone in the room (including sender)
+    // tempId is echoed back so the creator can reconcile its optimistic element
     io.to(`board:${boardId}`).emit('element:created', {
       boardId,
       element: created,
       userId: socket.userId,
+      tempId: tempId || null,
     });
 
     await logEvent(boardId, 'element:created', { elementId: created.id, type: created.type }, socket.userId);
@@ -148,7 +150,7 @@ function boardHandler(io, socket) {
       return socket.emit('error', { message: 'elementId is required' });
     }
 
-    await elementsService.softDelete(elementId);
+    await elementsService.softDelete(elementId, socket.userId);
 
     io.to(`board:${boardId}`).emit('element:deleted', {
       boardId,

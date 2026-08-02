@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { getBoardSocket } from './socket';
 import { useCanvasStore } from '@/stores/canvasStore';
+import { useAuthStore } from '@/stores/authStore';
 import toast from 'react-hot-toast';
 
 const LOCK_HEARTBEAT_MS = 10000; // 10 seconds
@@ -66,11 +67,26 @@ export function useLock(boardId) {
     };
 
     const handleLocked = ({ elementId, lockedBy }) => {
+      const currentUserId = useAuthStore.getState().user?.id;
+
+      // Don't apply lock visuals to the user who owns the lock —
+      // they should continue editing freely
+      if (lockedBy?.userId === currentUserId) return;
+
       useCanvasStore.getState().lockElement(elementId, lockedBy);
     };
 
     const handleUnlocked = ({ elementId }) => {
       useCanvasStore.getState().unlockElement(elementId);
+
+      // If this was our held lock that was released, clear tracking
+      if (heldLockRef.current === elementId) {
+        heldLockRef.current = null;
+        if (heartbeatRef.current) {
+          clearInterval(heartbeatRef.current);
+          heartbeatRef.current = null;
+        }
+      }
     };
 
     const handleLockDenied = ({ elementId }) => {

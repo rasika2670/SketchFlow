@@ -40,13 +40,22 @@ export function useBoardSocket(boardId) {
       loadElements();
     };
 
-    // ─── Element events from other users ──────────────────────────────────
+    // ─── Element events ──────────────────────────────────────────────────
 
-    const handleElementCreated = ({ element, userId }) => {
-      // Only add if from another user (we add optimistically on create)
-      if (userId !== currentUserId) {
-        useCanvasStore.getState().addElement(element);
+    const handleElementCreated = ({ element, userId, tempId }) => {
+      const store = useCanvasStore.getState();
+
+      if (userId === currentUserId && tempId) {
+        // This is our own creation — reconcile the temp element with server data
+        const consumed = store.consumePendingTemp(tempId);
+        if (consumed) {
+          store.replaceTempElement(tempId, element);
+          return;
+        }
       }
+
+      // From another user, or no tempId — add normally (addElement deduplicates by id)
+      store.addElement(element);
     };
 
     const handleElementUpdated = ({ element, userId }) => {

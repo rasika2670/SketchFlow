@@ -12,10 +12,10 @@ const RectangleElement = React.memo(function RectangleElement({
   isSelected,
   lockedBy,
   onSelect,
-  onDragStart,
   onDragEnd,
   onTransform,
   onContextMenu,
+  shapeRef,
 }) {
   const { id, x, y, width = 150, height = 100, color = '#6E56CF' } = element;
 
@@ -37,10 +37,11 @@ const RectangleElement = React.memo(function RectangleElement({
     e.cancelBubble = true;
     onContextMenu?.(id, { x: e.evt.clientX, y: e.evt.clientY });
   };
-
   return (
     <Group>
       <Rect
+        id={id}
+        ref={shapeRef}
         x={x}
         y={y}
         width={width}
@@ -61,27 +62,6 @@ const RectangleElement = React.memo(function RectangleElement({
         shadowOffset={{ x: 0, y: 2 }}
         shadowOpacity={0.5}
       />
-      {/* Selection handles */}
-      {isSelected && !lockedBy && (
-        <>
-          {[
-            { cx: x, cy: y },
-            { cx: x + width, cy: y },
-            { cx: x, cy: y + height },
-            { cx: x + width, cy: y + height },
-          ].map((pos, i) => (
-            <KonvaCircle
-              key={i}
-              x={pos.cx}
-              y={pos.cy}
-              radius={HANDLE_SIZE / 2}
-              fill="white"
-              stroke={HANDLE_COLOR}
-              strokeWidth={2}
-            />
-          ))}
-        </>
-      )}
     </Group>
   );
 });

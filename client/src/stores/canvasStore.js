@@ -1,5 +1,20 @@
 import { create } from 'zustand';
 
+/**
+ * Normalize numeric fields that PostgreSQL returns as strings (DECIMAL columns).
+ * Without this, viewport culling and position math break via string concatenation.
+ */
+function normalizeElement(el) {
+  return {
+    ...el,
+    x: Number(el.x) || 0,
+    y: Number(el.y) || 0,
+    width: el.width != null ? Number(el.width) : null,
+    height: el.height != null ? Number(el.height) : null,
+    version: Number(el.version) || 1,
+  };
+}
+
 export const useCanvasStore = create((set, get) => ({
   // ─── State ──────────────────────────────────────────────────────────────────
   elements: [],
@@ -10,28 +25,67 @@ export const useCanvasStore = create((set, get) => ({
   isDrawing: false,
   fillColor: '#6E56CF', // Default fill color for new elements
   lockedElements: {}, // { [elementId]: { userId, userName } }
+  pendingTempIds: new Map(), // Map<tempId, elementData> for optimistic creation reconciliation
 
   // ─── Element CRUD ───────────────────────────────────────────────────────────
 
   /** Replace entire elements array (used on initial load / full resync) */
   setElements: (elements) => {
-    set({ elements });
+    set({ elements: elements.map(normalizeElement) });
   },
 
   /** Append a new element (optimistic or from socket) */
   addElement: (element) => {
+    const normalized = normalizeElement(element);
     set((state) => {
       // Prevent duplicates
-      if (state.elements.some((el) => el.id === element.id)) return state;
-      return { elements: [...state.elements, element] };
+      if (state.elements.some((el) => el.id === normalized.id)) return state;
+      return { elements: [...state.elements, normalized] };
     });
+  },
+
+  /** Replace a temp-prefixed optimistic element with the server-confirmed version */
+  replaceTempElement: (tempId, serverElement) => {
+    const normalized = normalizeElement(serverElement);
+    set((state) => ({
+      elements: state.elements.map((el) =>
+        el.id === tempId ? normalized : el
+      ),
+      // Update selectedIds if the temp element was selected
+      selectedIds: state.selectedIds.map((sid) =>
+        sid === tempId ? normalized.id : sid
+      ),
+    }));
+  },
+
+  /** Register a pending optimistic creation for reconciliation */
+  addPendingTemp: (tempId, elementData) => {
+    get().pendingTempIds.set(tempId, elementData);
+  },
+
+  /** Consume a pending temp ID (returns the tempId if found, null otherwise) */
+  consumePendingTemp: (tempId) => {
+    const map = get().pendingTempIds;
+    if (map.has(tempId)) {
+      map.delete(tempId);
+      return tempId;
+    }
+    return null;
   },
 
   /** Merge changes into an existing element (optimistic or from socket) */
   updateElement: (id, changes) => {
+    // Coerce any numeric fields that may arrive as strings from PostgreSQL
+    const normalized = { ...changes };
+    if (normalized.x !== undefined) normalized.x = Number(normalized.x) || 0;
+    if (normalized.y !== undefined) normalized.y = Number(normalized.y) || 0;
+    if (normalized.width !== undefined) normalized.width = normalized.width != null ? Number(normalized.width) : null;
+    if (normalized.height !== undefined) normalized.height = normalized.height != null ? Number(normalized.height) : null;
+    if (normalized.version !== undefined) normalized.version = Number(normalized.version) || 1;
+
     set((state) => ({
       elements: state.elements.map((el) =>
-        el.id === id ? { ...el, ...changes } : el
+        el.id === id ? { ...el, ...normalized } : el
       ),
     }));
   },
@@ -46,9 +100,10 @@ export const useCanvasStore = create((set, get) => ({
 
   /** Revert an element to server state on conflict */
   revertElement: (id, serverState) => {
+    const normalized = normalizeElement(serverState);
     set((state) => ({
       elements: state.elements.map((el) =>
-        el.id === id ? { ...el, ...serverState } : el
+        el.id === id ? { ...el, ...normalized } : el
       ),
     }));
   },
@@ -133,6 +188,8 @@ export const useCanvasStore = create((set, get) => ({
   // ─── Reset ─────────────────────────────────────────────────────────────────
 
   reset: () => {
+    // Clear the pending map (it's mutable, not part of set state)
+    get().pendingTempIds.clear();
     set({
       elements: [],
       selectedIds: [],

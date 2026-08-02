@@ -1,5 +1,5 @@
-import { useRef, useState, useCallback, useMemo } from 'react';
-import { Stage, Layer } from 'react-konva';
+import { useRef, useState, useCallback, useMemo, useEffect } from 'react';
+import { Stage, Layer, Transformer } from 'react-konva';
 import { useCanvasStore } from '@/stores/canvasStore';
 import { useAuthStore } from '@/stores/authStore';
 import { getBoardSocket } from '@/sockets/socket';
@@ -34,6 +34,12 @@ const DEFAULT_DIMENSIONS = {
   image: { width: 200, height: 150 },
 };
 
+/** Generate a temporary ID for optimistic creation */
+let tempCounter = 0;
+function generateTempId() {
+  return `temp_${Date.now()}_${++tempCounter}`;
+}
+
 /**
  * Canvas — React-Konva infinite canvas with element rendering, selection,
  * zoom/pan, viewport culling, and context menu support.
@@ -42,6 +48,8 @@ const DEFAULT_DIMENSIONS = {
  */
 export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLock }) {
   const stageRef = useRef(null);
+  const nodeRefs = useRef(new Map());
+  const transformerRef = useRef(null);
 
   // ─── Canvas store subscriptions ─────────────────────────────────────────
   const elements = useCanvasStore((s) => s.elements);
@@ -52,13 +60,24 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
   const fillColor = useCanvasStore((s) => s.fillColor);
   const lockedElements = useCanvasStore((s) => s.lockedElements);
 
+  // ─── Sync Transformer ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (transformerRef.current) {
+      const nodes = selectedIds
+        .filter((id) => !lockedElements[id]) // Don't allow resizing locked elements
+        .map((id) => nodeRefs.current.get(id))
+        .filter(Boolean);
+      transformerRef.current.nodes(nodes);
+      transformerRef.current.getLayer().batchDraw();
+    }
+  }, [selectedIds, elements, lockedElements]);
+
   // ─── Local state ────────────────────────────────────────────────────────
   const [selectionBox, setSelectionBox] = useState(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
   const [editingElement, setEditingElement] = useState(null);
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
-
   // ─── Container ref for dynamic sizing ───────────────────────────────────
   const containerRef = useCallback((node) => {
     if (!node) return;
@@ -233,6 +252,7 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
         if (!socket) return;
 
         const dims = DEFAULT_DIMENSIONS[tool] || { width: 100, height: 100 };
+        const tempId = generateTempId();
         const elementData = {
           type: tool,
           x: pos.x,
@@ -242,7 +262,13 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
           text: tool === 'text' ? '' : tool === 'sticky' ? '' : null,
         };
 
-        socket.emit('element:created', { boardId, element: elementData });
+        // Optimistic: add to store immediately with temp ID for instant visual feedback
+        useCanvasStore.getState().addElement({ id: tempId, ...elementData, version: 1 });
+
+        // Track the temp ID so useBoardSocket can reconcile when the server responds
+        useCanvasStore.getState().addPendingTemp(tempId, elementData);
+
+        socket.emit('element:created', { boardId, element: elementData, tempId });
 
         // Switch back to select tool after creating
         useCanvasStore.getState().setTool('select');
@@ -258,16 +284,24 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
           const socket = getBoardSocket();
           if (!socket) return;
 
+          const tempId = generateTempId();
           const dims = DEFAULT_DIMENSIONS.image;
+          const elementData = {
+            type: 'image',
+            x: pos.x,
+            y: pos.y,
+            ...dims,
+            text: objectUrl,
+          };
+
+          // Optimistic: add immediately
+          useCanvasStore.getState().addElement({ id: tempId, ...elementData, version: 1 });
+          useCanvasStore.getState().addPendingTemp(tempId, elementData);
+
           socket.emit('element:created', {
             boardId,
-            element: {
-              type: 'image',
-              x: pos.x,
-              y: pos.y,
-              ...dims,
-              text: objectUrl, // URL stored in text field
-            },
+            element: elementData,
+            tempId,
           });
 
           useCanvasStore.getState().setTool('select');
@@ -507,6 +541,10 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
                 element={el}
                 isSelected={isSelected}
                 lockedBy={lockedBy}
+                shapeRef={(node) => {
+                  if (node) nodeRefs.current.set(el.id, node);
+                  else nodeRefs.current.delete(el.id);
+                }}
                 onSelect={handleElementSelect}
                 onDragStart={handleElementDragStart}
                 onDragEnd={handleElementDragEnd}
@@ -532,6 +570,64 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
 
           {/* Selection box */}
           <SelectionBox box={selectionBox} />
+
+          {/* Transformer for resizing selected elements */}
+          <Transformer
+            ref={transformerRef}
+            boundBoxFunc={(oldBox, newBox) => {
+              // limit resize
+              if (Math.abs(newBox.width) < 5 || Math.abs(newBox.height) < 5) {
+                return oldBox;
+              }
+              return newBox;
+            }}
+            onTransformStart={() => {
+              selectedIds.forEach((id) => requestLock?.(id));
+            }}
+            onTransformEnd={() => {
+              const nodes = transformerRef.current.nodes();
+              const socket = getBoardSocket();
+
+              nodes.forEach((node) => {
+                const id = node.id();
+                const el = elements.find((e) => e.id === id);
+                if (!el) return;
+
+                const scaleX = node.scaleX();
+                const scaleY = node.scaleY();
+
+                // Reset scale to 1 for crisp rendering, apply to width/height
+                node.scaleX(1);
+                node.scaleY(1);
+
+                const newWidth = Math.max(5, node.width() * scaleX);
+                const newHeight = Math.max(5, node.height() * scaleY);
+
+                const updates = {
+                  x: node.x(),
+                  y: node.y(),
+                  width: newWidth,
+                  height: newHeight,
+                  rotation: node.rotation(),
+                };
+
+                // Optimistic update
+                useCanvasStore.getState().updateElement(id, updates);
+
+                // Emit to server
+                if (socket) {
+                  socket.emit('element:updated', {
+                    boardId,
+                    elementId: id,
+                    updates,
+                    version: el.version,
+                  });
+                }
+
+                releaseLock?.(id);
+              });
+            }}
+          />
 
           {/* Cursor overlay — other users' cursors */}
           <CursorOverlay />

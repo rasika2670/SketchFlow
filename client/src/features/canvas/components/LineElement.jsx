@@ -12,9 +12,9 @@ const LineElement = React.memo(function LineElement({
   isSelected,
   lockedBy,
   onSelect,
-  onDragStart,
   onDragEnd,
   onContextMenu,
+  shapeRef,
 }) {
   const {
     id,
@@ -49,8 +49,12 @@ const LineElement = React.memo(function LineElement({
 
   return (
     <Group
+      id={id}
+      ref={shapeRef}
       x={x}
       y={y}
+      width={width}
+      height={height}
       draggable={!lockedBy}
       onClick={handleClick}
       onTap={handleClick}
@@ -74,27 +78,6 @@ const LineElement = React.memo(function LineElement({
         lineCap="round"
         lineJoin="round"
       />
-      {/* Endpoint handles */}
-      {isSelected && !lockedBy && (
-        <>
-          <KonvaCircle
-            x={0}
-            y={0}
-            radius={HANDLE_SIZE / 2}
-            fill="white"
-            stroke={HANDLE_COLOR}
-            strokeWidth={2}
-          />
-          <KonvaCircle
-            x={width}
-            y={height}
-            radius={HANDLE_SIZE / 2}
-            fill="white"
-            stroke={HANDLE_COLOR}
-            strokeWidth={2}
-          />
-        </>
-      )}
     </Group>
   );
 });

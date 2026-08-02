@@ -13,10 +13,10 @@ const TextElement = React.memo(function TextElement({
   isSelected,
   lockedBy,
   onSelect,
-  onDragStart,
   onDragEnd,
   onDblClick,
   onContextMenu,
+  shapeRef,
 }) {
   const {
     id,
@@ -53,8 +53,12 @@ const TextElement = React.memo(function TextElement({
 
   return (
     <Group
+      id={id}
+      ref={shapeRef}
       x={x}
       y={y}
+      width={width}
+      height={40}
       draggable={!lockedBy}
       onClick={handleClick}
       onTap={handleClick}
@@ -94,28 +98,6 @@ const TextElement = React.memo(function TextElement({
           strokeWidth={1}
           dash={[4, 4]}
         />
-      )}
-
-      {/* Selection handles */}
-      {isSelected && !lockedBy && (
-        <>
-          <KonvaCircle
-            x={0}
-            y={0}
-            radius={HANDLE_SIZE / 2}
-            fill="white"
-            stroke={HANDLE_COLOR}
-            strokeWidth={2}
-          />
-          <KonvaCircle
-            x={width}
-            y={0}
-            radius={HANDLE_SIZE / 2}
-            fill="white"
-            stroke={HANDLE_COLOR}
-            strokeWidth={2}
-          />
-        </>
       )}
     </Group>
   );

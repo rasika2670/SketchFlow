@@ -62,6 +62,17 @@ function presenceHandler(io, socket) {
         // Store user info as JSON value in hash
         await redis.hset(presenceKey, userId, JSON.stringify({ userId, userName, userAvatar }));
         await redis.expire(presenceKey, PRESENCE_TTL_SECONDS);
+
+        // Send current presence list to the joining user
+        const allPresence = await redis.hgetall(presenceKey);
+        if (allPresence) {
+          const users = Object.values(allPresence)
+            .map((v) => { try { return JSON.parse(v); } catch { return null; } })
+            .filter((u) => u && u.userId !== userId && u.status !== 'away');
+          if (users.length > 0) {
+            socket.emit('presence:list', users);
+          }
+        }
       } catch (err) {
         logger.warn('presence:join Redis error', { error: err.message, userId, boardId });
       }

@@ -14,9 +14,9 @@ const ImageElement = React.memo(function ImageElement({
   isSelected,
   lockedBy,
   onSelect,
-  onDragStart,
   onDragEnd,
   onContextMenu,
+  shapeRef,
 }) {
   const {
     id,
@@ -75,8 +75,12 @@ const ImageElement = React.memo(function ImageElement({
 
   return (
     <Group
+      id={id}
+      ref={shapeRef}
       x={x}
       y={y}
+      width={width}
+      height={height}
       draggable={!lockedBy}
       onClick={handleClick}
       onTap={handleClick}
@@ -130,28 +134,6 @@ const ImageElement = React.memo(function ImageElement({
           strokeWidth={2}
           cornerRadius={4}
         />
-      )}
-
-      {/* Selection handles */}
-      {isSelected && !lockedBy && (
-        <>
-          {[
-            { cx: 0, cy: 0 },
-            { cx: width, cy: 0 },
-            { cx: 0, cy: height },
-            { cx: width, cy: height },
-          ].map((pos, i) => (
-            <KonvaCircle
-              key={i}
-              x={pos.cx}
-              y={pos.cy}
-              radius={HANDLE_SIZE / 2}
-              fill="white"
-              stroke={HANDLE_COLOR}
-              strokeWidth={2}
-            />
-          ))}
-        </>
       )}
     </Group>
   );

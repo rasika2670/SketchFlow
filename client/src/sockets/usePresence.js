@@ -71,9 +71,18 @@ export function usePresence(boardId) {
       // Optionally mark as away — for now just ignore until they fully leave
     };
 
-    const handleCursorMoved = ({ userId, x, y }) => {
+    const handleCursorMoved = ({ userId, userName, x, y }) => {
       if (userId === currentUserId) return;
-      usePresenceStore.getState().updateCursor(userId, { x, y });
+
+      const store = usePresenceStore.getState();
+
+      // Lazily register the user if they're not in onlineUsers yet
+      // (handles race conditions / reconnect scenarios where presence:user_joined was missed)
+      if (!store.onlineUsers[userId]) {
+        store.addUser({ userId, userName: userName || 'User' });
+      }
+
+      store.updateCursor(userId, { x, y });
     };
 
     const handlePresenceList = (users) => {

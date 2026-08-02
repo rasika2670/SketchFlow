@@ -161,16 +161,21 @@
 - **Compilation**: Clean production build (✓ built in 2.61s, 0 errors).
 
 ## ✅ Frontend Phase 3: Infinite Canvas + Real-Time Elements (100% COMPLETE)
-- **API Layer**: `elements.api.js` (CRUD + batch position update).
+- **API Layer**: `elements.api.js` (CRUD + batch position update). Note: APIs with named exports are dynamically imported using `await import(...)` without destructuring `default`.
 - **Zustand Stores**: `canvasStore.js` (elements, selection, tools, zoom/pan, locks), `presenceStore.js` (online users + cursors with deterministic color assignment).
 - **Board Socket**: Separate `socket.js` (autoConnect:false, exponential backoff reconnection, token reauthentication). Coexists with global socket from `socketManager.js`.
 - **Socket Hooks**: `useBoardSocket.js` (board room join/leave + element CRUD listeners), `usePresence.js` (cursor tracking throttled at ~15 FPS in canvas coordinates, 30s heartbeat), `useLock.js` (element locking with 10s heartbeat, auto-release on unmount).
 - **Canvas Engine**: React-Konva `Canvas.jsx` with infinite pan (stage drag), zoom-toward-cursor (mouse wheel), click-to-create elements, area selection box, viewport culling (only visible elements rendered), and inline text editing via HTML textarea overlay.
+- **Resizing & Transformation**: Implemented a unified `Konva.Transformer` applied to selected shapes, handling resizing by intercepting `transformend`, resetting scale to 1.0 (to maintain crisp strokes/text), and applying delta to width/height.
+- **Optimistic UI Updates**: Instant element creation on click using `generateTempId()`, with seamless reconciliation against the server's delayed DB-backed `element:created` broadcast to prevent flickering.
+- **PostgreSQL DECIMAL Fixes**: `normalizeElement()` utility enforces `Number()` casting on coordinate/dimension properties retrieved from DB, bypassing `node-postgres` default stringification for decimals which previously broke culling arithmetic.
 - **Element Components** (all `React.memo`): `RectangleElement`, `CircleElement`, `StickyNoteElement` (warm yellow with fold effect), `LineElement` (wide hit area), `TextElement`, `ImageElement` (async loading with native Image API + placeholder).
 - **Canvas Overlays**: `SelectionBox` (blue dashed rect), `CursorOverlay` (arrow + name pill per user), `LockIndicator` (🔒 badge), `ElementContextMenu` (edit/duplicate/color/convert-to-task/delete with batch support).
 - **Canvas Controls**: `CanvasControls.jsx` (glassmorphism zoom in/out + percentage + fit-to-screen).
 - **Board Page Layout**: `BoardPage.jsx` (orchestrates socket + canvas + layout), `BoardHeader.jsx` (glassmorphism with back nav, board name, presence avatar stack with online dots, ConnectionStatus pill), `Toolbar.jsx` (7 tools with Lucide icons + color picker), `RightSidebar.jsx` (collapsible with Tasks/Chat/Files tabs — placeholder for Phase 4/5).
 - **Connection Status**: `ConnectionStatus.jsx` (🟢/🟡/🔴 pill with click-to-reconnect), `useConnectionStatus.js` hook (toast on reconnect/disconnect).
+- **Presence & Locks**: On `presence:join`, server emits full `presence:list` for existing users; client performs lazy registration on unknown cursor movements. Lock indicators bypass the current lock owner, allowing uninterrupted editing.
+- **Deletion Broadcasting**: Fixed a silent database `not-null constraint` crash in the `element:deleted` socket handler by properly passing `socket.userId` to `elementsService.softDelete()`, ensuring deletions are successfully broadcasted to all collaborators in real-time.
 - **Route Wiring**: Lazy-loaded `BoardPage` at `/boards/:boardId` with Suspense fallback.
 - **Compilation**: Clean production build (✓ built in 9.99s, 0 errors, code-split BoardPage chunk at 345 KB / 105 KB gzipped).
 
@@ -211,6 +216,7 @@
 - **Canvas Coordinate Conversion**: Mouse coordinates are converted to canvas space (`(screenPos / zoom) - panOffset`) before sending cursor updates, ensuring cursors align correctly across different zoom/pan levels.
 - **Image Tool (Phase 3)**: Uses `<input type="file">` + `URL.createObjectURL()` for local image preview. Object URLs will be replaced with Cloudinary URLs in Phase 5.
 - **Lazy-Loaded Board Page**: `BoardPage` is code-split via `React.lazy()` + `Suspense` to keep the main bundle lean. Canvas chunk is ~345 KB (105 KB gzipped).
+- **WebSocket URL Resolution**: `SOCKET_URL` uses an explicit fallback logic checking `import.meta.env.DEV` to default to `http://localhost:5000` during development if `VITE_WS_URL` is undefined, preventing Socket.IO from mistakenly attempting same-origin connections on the frontend dev server (port 3000/5173). In production, it gracefully handles empty string fallbacks via `VITE_API_URL` parsing to support same-origin proxy connections.
 - **Isolated Production Networking**: `docker-compose.prod.yml` keeps database and cache container ports unexposed to external networks.
 
 ## 📁 Files Created/Modified in Frontend Phase 3

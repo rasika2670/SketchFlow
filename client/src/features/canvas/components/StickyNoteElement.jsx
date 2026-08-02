@@ -15,9 +15,9 @@ const StickyNoteElement = React.memo(function StickyNoteElement({
   lockedBy,
   onSelect,
   onDragStart,
-  onDragEnd,
   onDblClick,
   onContextMenu,
+  shapeRef,
 }) {
   const {
     id,
@@ -55,8 +55,12 @@ const StickyNoteElement = React.memo(function StickyNoteElement({
 
   return (
     <Group
+      id={id}
+      ref={shapeRef}
       x={x}
       y={y}
+      width={width}
+      height={height}
       draggable={!lockedBy}
       onClick={handleClick}
       onTap={handleClick}
@@ -105,28 +109,6 @@ const StickyNoteElement = React.memo(function StickyNoteElement({
         wrap="word"
         ellipsis={true}
       />
-
-      {/* Selection handles */}
-      {isSelected && !lockedBy && (
-        <>
-          {[
-            { cx: 0, cy: 0 },
-            { cx: width, cy: 0 },
-            { cx: 0, cy: height },
-            { cx: width, cy: height },
-          ].map((pos, i) => (
-            <KonvaCircle
-              key={i}
-              x={pos.cx}
-              y={pos.cy}
-              radius={HANDLE_SIZE / 2}
-              fill="white"
-              stroke={HANDLE_COLOR}
-              strokeWidth={2}
-            />
-          ))}
-        </>
-      )}
     </Group>
   );
 });
