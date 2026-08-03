@@ -14,6 +14,7 @@ import SelectionBox from './components/SelectionBox';
 import CursorOverlay from './components/CursorOverlay';
 import LockIndicator from './components/LockIndicator';
 import ElementContextMenu from './components/ElementContextMenu';
+import ConvertStickyModal from '@/features/tasks/components/ConvertStickyModal';
 
 const ELEMENT_COMPONENTS = {
   rectangle: RectangleElement,
@@ -76,6 +77,7 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
   const [selectionBox, setSelectionBox] = useState(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
+  const [convertElementId, setConvertElementId] = useState(null);
   const [editingElement, setEditingElement] = useState(null);
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
   // ─── Container ref for dynamic sizing ───────────────────────────────────
@@ -659,6 +661,15 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
         onDelete={handleDelete}
         onColorChange={handleColorChange}
         onEdit={(id) => setEditingElement(id)}
+        onConvertToTask={(id) => setConvertElementId(id)}
+      />
+
+      {/* Convert sticky to task modal */}
+      <ConvertStickyModal
+        isOpen={!!convertElementId}
+        onClose={() => setConvertElementId(null)}
+        boardId={boardId}
+        elementId={convertElementId}
       />
     </div>
   );

@@ -5,6 +5,7 @@
 **Frontend Phase 1 is 100% COMPLETE.** (Setup, Tailwind config with design tokens, routing, Axios interceptors, Auth API & Zustand stores, auth pages, and shared components implemented, verified and building).
 **Frontend Phase 2 is 100% COMPLETE.** (Dashboard page, Workspace page, Board cards, API layers, Zustand stores, create/invite/settings modals, member management, breadcrumb nav, and route wiring — all building cleanly).
 **Frontend Phase 3 is 100% COMPLETE.** (Infinite canvas with React-Konva, elements API, canvas/presence Zustand stores, board socket with real-time element CRUD, cursor presence, element locking, 7 element types, toolbar, board header with presence avatars, right sidebar shell, connection status, context menu, canvas controls — all building cleanly).
+**Frontend Phase 4 is 100% COMPLETE.** (Task Management API, task Zustand store, task socket hook, drag-and-drop Kanban board with @dnd-kit, create/edit/detail modals, sticky note → task conversion flow, resizable right sidebar — all building cleanly).
 
 ## 📁 Files Created/Modified in Phase 6
 - `server/src/jobs/cron.js` (NEW — Configurable cron manager for activity log retention, expired invite cleanups, and 15-min heap memory audits)
@@ -179,13 +180,20 @@
 - **Route Wiring**: Lazy-loaded `BoardPage` at `/boards/:boardId` with Suspense fallback.
 - **Compilation**: Clean production build (✓ built in 9.99s, 0 errors, code-split BoardPage chunk at 345 KB / 105 KB gzipped).
 
+## ✅ Frontend Phase 4: Task Management & Sticky Conversion (100% COMPLETE)
+- **API Layer**: `tasks.api.js` (CRUD, list by board, convert from sticky).
+- **Zustand Stores**: `taskStore.js` (Kanban state, optimistic UI updates, socket-driven mutations, derived getters).
+- **Socket Hooks**: `useTaskSocket.js` (listens for task events: created, updated, status_changed, assigned, deleted).
+- **Kanban Board**: `TaskPanel.jsx` (main Kanban board with `@dnd-kit/core` for drag-and-drop), `KanbanColumn.jsx` (droppable status column), `TaskCard.jsx` (draggable card showing title, priority, due date, assignee).
+- **Modals & Forms**: `CreateTaskModal.jsx` (new task form with defaults), `TaskDetailModal.jsx` (detailed view with inline editing), `ConvertStickyModal.jsx` (sticky → task conversion with text pre-fill).
+- **UI Enhancements**: `TaskFilters.jsx` (compact priority filter), resizable right sidebar (`RightSidebar.jsx`) with left-edge drag handle and local storage persistence. Fixed flexbox behavior on canvas wrapper (`min-w-0 overflow-hidden`) to allow sidebar to expand leftward.
+- **Integration**: Wired `RightSidebar.jsx` Tasks tab, mounted `useTaskSocket` in `BoardPage.jsx`, added "Convert to Task" to `ElementContextMenu` in `Canvas.jsx`.
+- **Compilation**: Clean production build.
+
 ## 🚀 Next Up (Frontend Implementation)
-- Proceed with Frontend Phase 4: Task Management + Sticky Conversion.
-  - Implement tasks API, task Zustand store, and task socket hook.
-  - Build Kanban board with @dnd-kit drag-and-drop in right sidebar.
-  - Add create/edit/detail task modals.
-  - Implement sticky note → task conversion flow.
-  - Add task filters (status, assignee, priority).
+- Proceed with Frontend Phase 5: Chat & Files.
+  - Implement Chat Module (real-time chat panel, message edit/delete, cursor pagination).
+  - Implement Files Module (upload to Cloudinary, files list panel, deletion).
 
 ## 📌 Important Context & Decisions
 - **Database**: PostgreSQL (running locally or via Cloud/Neon). Connection via `DATABASE_URL`.
@@ -246,3 +254,18 @@
 - `client/src/features/board/components/ConnectionStatus.jsx` (NEW — 🟢/🟡/🔴 connection pill)
 - `client/src/hooks/useConnectionStatus.js` (NEW — Socket event → uiStore connection status sync)
 - `client/src/app/routes.jsx` (MODIFIED — Added lazy-loaded /boards/:boardId route with Suspense)
+
+## 📁 Files Created/Modified in Frontend Phase 4
+- `client/src/api/tasks.api.js` (NEW — Elements REST API: CRUD + convert)
+- `client/src/stores/taskStore.js` (NEW — Tasks Zustand store)
+- `client/src/sockets/useTaskSocket.js` (NEW — Task socket hook for real-time updates)
+- `client/src/features/tasks/TaskPanel.jsx` (NEW — Drag-and-drop Kanban board)
+- `client/src/features/tasks/components/KanbanColumn.jsx` (NEW — Droppable column component)
+- `client/src/features/tasks/components/TaskCard.jsx` (NEW — Draggable task card)
+- `client/src/features/tasks/components/TaskFilters.jsx` (NEW — Compact priority filter)
+- `client/src/features/tasks/components/CreateTaskModal.jsx` (NEW — Task creation modal)
+- `client/src/features/tasks/components/TaskDetailModal.jsx` (NEW — Task detail and edit modal)
+- `client/src/features/tasks/components/ConvertStickyModal.jsx` (NEW — Convert sticky note modal)
+- `client/src/features/board/components/RightSidebar.jsx` (MODIFIED — Added drag-to-resize and Tasks tab integration)
+- `client/src/features/board/BoardPage.jsx` (MODIFIED — Mounted `useTaskSocket`, fixed flexbox for resize)
+- `client/src/features/canvas/Canvas.jsx` (MODIFIED — Added ConvertStickyModal and wired context menu)

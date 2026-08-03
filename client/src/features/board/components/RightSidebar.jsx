@@ -1,5 +1,7 @@
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { ClipboardList, MessageCircle, FolderOpen, X, ChevronRight } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
+import TaskPanel from '@/features/tasks/TaskPanel';
 
 const TABS = [
   { id: 'tasks', icon: ClipboardList, label: 'Tasks' },
@@ -7,15 +9,73 @@ const TABS = [
   { id: 'files', icon: FolderOpen, label: 'Files' },
 ];
 
+const MIN_WIDTH = 240;
+const MAX_WIDTH = 600;
+const DEFAULT_WIDTH = 320;
+const STORAGE_KEY = 'sf-sidebar-width';
+
 /**
- * RightSidebar — collapsible panel on the right side of the board.
- * Tabs: Tasks | Chat | Files (placeholder panels for Phase 4/5).
+ * RightSidebar — collapsible, resizable panel on the right side of the board.
+ * Tabs: Tasks | Chat | Files.
+ * Drag the left edge to resize (240–600px, persisted in localStorage).
  */
 export default function RightSidebar() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const activePanel = useUIStore((s) => s.activePanel);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const setActivePanel = useUIStore((s) => s.setActivePanel);
+
+  // ─── Resizable width ───────────────────────────────────────────────────
+  const [width, setWidth] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const parsed = saved ? parseInt(saved, 10) : NaN;
+    return !isNaN(parsed) && parsed >= MIN_WIDTH && parsed <= MAX_WIDTH ? parsed : DEFAULT_WIDTH;
+  });
+  const [isResizing, setIsResizing] = useState(false);
+  const startXRef = useRef(0);
+  const startWidthRef = useRef(DEFAULT_WIDTH);
+  const widthRef = useRef(width);
+
+  // Keep ref in sync so mouseUp can read the latest value
+  useEffect(() => { widthRef.current = width; }, [width]);
+
+  const handleMouseDown = useCallback((e) => {
+    e.preventDefault();
+    startXRef.current = e.clientX;
+    startWidthRef.current = widthRef.current;
+    setIsResizing(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e) => {
+      // Handle is on the LEFT edge of a RIGHT-aligned sidebar:
+      // dragging left (clientX decreases) → sidebar expands leftward
+      const delta = startXRef.current - e.clientX;
+      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidthRef.current + delta));
+      setWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      localStorage.setItem(STORAGE_KEY, String(widthRef.current));
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    // Prevent text selection while dragging
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+  }, [isResizing]);
 
   if (!sidebarOpen) {
     return (
@@ -30,7 +90,29 @@ export default function RightSidebar() {
   }
 
   return (
-    <div className="w-80 flex-shrink-0 flex flex-col bg-slate-900/95 backdrop-blur-md border-l border-slate-700 z-30 animate-slide-in-right">
+    <div
+      className="relative flex-shrink-0 flex flex-col bg-slate-900/95 backdrop-blur-md border-l border-slate-700 z-30 animate-slide-in-right"
+      style={{ width }}
+    >
+      {/* Resize handle — left edge */}
+      <div
+        onMouseDown={handleMouseDown}
+        className={`
+          absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize z-40
+          group flex items-center justify-center
+          hover:bg-primary-500/20 active:bg-primary-500/30
+          transition-colors duration-sf-fast
+          ${isResizing ? 'bg-primary-500/30' : ''}
+        `}
+        title="Drag to resize"
+      >
+        {/* Visual indicator — subtle dots on hover */}
+        <div className={`
+          w-0.5 h-8 rounded-full transition-opacity duration-sf-fast
+          ${isResizing ? 'bg-primary-400 opacity-100' : 'bg-slate-500 opacity-0 group-hover:opacity-60'}
+        `} />
+      </div>
+
       {/* Tabs + close button */}
       <div className="flex items-center border-b border-slate-700">
         <div className="flex flex-1">
@@ -60,14 +142,10 @@ export default function RightSidebar() {
         </button>
       </div>
 
-      {/* Panel content — placeholder for Phase 4/5 */}
+      {/* Panel content */}
       <div className="flex-1 overflow-y-auto p-4">
         {activePanel === 'tasks' && (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <ClipboardList size={40} className="text-slate-600 mb-3" />
-            <p className="text-sf-base text-slate-400 font-medium">Task Panel</p>
-            <p className="text-sf-sm text-slate-500 mt-1">Coming in Phase 4</p>
-          </div>
+          <TaskPanel />
         )}
         {activePanel === 'chat' && (
           <div className="flex flex-col items-center justify-center h-full text-center">

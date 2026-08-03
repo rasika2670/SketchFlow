@@ -4,6 +4,7 @@ import { useBoardStore } from '@/stores/boardStore';
 import { useCanvasStore } from '@/stores/canvasStore';
 import { connectBoardSocket, disconnectBoardSocket } from '@/sockets/socket';
 import { useBoardSocket } from '@/sockets/useBoardSocket';
+import { useTaskSocket } from '@/sockets/useTaskSocket';
 import { usePresence } from '@/sockets/usePresence';
 import { useLock } from '@/sockets/useLock';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
@@ -62,6 +63,7 @@ export default function BoardPage() {
 
   // ─── Socket hooks ──────────────────────────────────────────────────────
   useBoardSocket(boardId);
+  useTaskSocket(boardId);
   const { sendCursorMove } = usePresence(boardId);
   const { requestLock, releaseLock } = useLock(boardId);
   useConnectionStatus();
@@ -77,7 +79,7 @@ export default function BoardPage() {
         <Toolbar />
 
         {/* Canvas area (fills remaining space) */}
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-w-0 overflow-hidden">
           <Canvas
             boardId={boardId}
             sendCursorMove={sendCursorMove}
