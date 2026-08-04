@@ -5,6 +5,7 @@ import { useCanvasStore } from '@/stores/canvasStore';
 import { connectBoardSocket, disconnectBoardSocket } from '@/sockets/socket';
 import { useBoardSocket } from '@/sockets/useBoardSocket';
 import { useTaskSocket } from '@/sockets/useTaskSocket';
+import { useChatSocket } from '@/sockets/useChatSocket';
 import { usePresence } from '@/sockets/usePresence';
 import { useLock } from '@/sockets/useLock';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
@@ -64,6 +65,7 @@ export default function BoardPage() {
   // ─── Socket hooks ──────────────────────────────────────────────────────
   useBoardSocket(boardId);
   useTaskSocket(boardId);
+  useChatSocket(boardId);
   const { sendCursorMove } = usePresence(boardId);
   const { requestLock, releaseLock } = useLock(boardId);
   useConnectionStatus();

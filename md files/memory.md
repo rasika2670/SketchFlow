@@ -6,6 +6,7 @@
 **Frontend Phase 2 is 100% COMPLETE.** (Dashboard page, Workspace page, Board cards, API layers, Zustand stores, create/invite/settings modals, member management, breadcrumb nav, and route wiring — all building cleanly).
 **Frontend Phase 3 is 100% COMPLETE.** (Infinite canvas with React-Konva, elements API, canvas/presence Zustand stores, board socket with real-time element CRUD, cursor presence, element locking, 7 element types, toolbar, board header with presence avatars, right sidebar shell, connection status, context menu, canvas controls — all building cleanly).
 **Frontend Phase 4 is 100% COMPLETE.** (Task Management API, task Zustand store, task socket hook, drag-and-drop Kanban board with @dnd-kit, create/edit/detail modals, sticky note → task conversion flow, resizable right sidebar — all building cleanly).
+**Frontend Phase 5 is 100% COMPLETE.** (Chat API + Zustand store + socket hook, real-time chat panel with infinite scroll, threaded replies, message edit/delete, Files API + Cloudinary XHR upload with progress, file list/preview/delete, activity API — all building cleanly).
 
 ## 📁 Files Created/Modified in Phase 6
 - `server/src/jobs/cron.js` (NEW — Configurable cron manager for activity log retention, expired invite cleanups, and 15-min heap memory audits)
@@ -191,9 +192,23 @@
 - **Compilation**: Clean production build.
 
 ## 🚀 Next Up (Frontend Implementation)
-- Proceed with Frontend Phase 5: Chat & Files.
-  - Implement Chat Module (real-time chat panel, message edit/delete, cursor pagination).
-  - Implement Files Module (upload to Cloudinary, files list panel, deletion).
+- Proceed with Frontend Phase 6: Polish + Production.
+  - Keyboard shortcuts (`useKeyboardShortcuts.js`).
+  - Theme toggle (dark/light mode).
+  - Responsive layout adjustments.
+  - Loading skeleton screens.
+  - Error handling polish.
+  - Production build optimization.
+
+## ✅ Frontend Phase 5: Chat + Files + Activity Feed (100% COMPLETE)
+- **API Layer**: `chat.api.js` (send, get, update, delete, thread replies), `files.api.js` (signature, register, list, delete), `activity.api.js` (cursor-paginated board activities).
+- **Zustand Store**: `chatStore.js` (cursor-based pagination with `loadMore`, optimistic message send with temp IDs, edit/delete, socket-driven `addMessage`/`updateMessage`/`removeMessage`, thread support with `fetchThreadReplies`/`addThreadMessage`/`closeThread`).
+- **Socket Hook**: `useChatSocket.js` (follows `useTaskSocket` pattern — listens for `chat:new_message`, `chat:updated`, `chat:deleted`, skips own-user events, reloads on reconnect).
+- **Chat UI**: `ChatPanel.jsx` (orchestrates MessageList + MessageInput + ThreadView overlay), `MessageList.jsx` (reverse-chronological display, IntersectionObserver infinite scroll up, auto-scroll to bottom within 100px, date separators via `date-fns`), `MessageBubble.jsx` (`React.memo`, own-message `bg-primary-500/10`, hover action buttons with edit/delete/reply, inline edit mode with Enter/Esc, thread reply count link, `(edited)` indicator), `MessageInput.jsx` (auto-growing textarea up to 4 lines, Enter-to-send, Shift+Enter newline), `ThreadView.jsx` (slide-in overlay with parent message, replies list, scoped reply input).
+- **Files UI**: `FilesPanel.jsx` (local state for files array, upload button + file list + preview, `EmptyState` when no files), `FileCard.jsx` (`React.memo`, mime-type icon mapping, file size formatting, download/preview/delete actions with `ConfirmDialog`), `FileUploadButton.jsx` (XHR direct upload to Cloudinary with signed params from backend, progress events, cancel support, multi-file), `UploadProgress.jsx` (inline progress bar with filename, percentage, cancel button), `FilePreview.jsx` (Modal xl for full-size image preview).
+- **Integration**: Wired `ChatPanel` and `FilesPanel` into `RightSidebar.jsx` tabs replacing Phase 5 placeholders. Mounted `useChatSocket(boardId)` in `BoardPage.jsx` alongside existing `useTaskSocket`.
+- **Cloudinary Upload**: Uses direct XHR to `https://api.cloudinary.com/v1_1/{cloud_name}/auto/upload` instead of Cloudinary Upload Widget to avoid external script dependency and gain full control over upload progress UI.
+- **Compilation**: Clean production build (✓ built in 4.56s, 0 errors, BoardPage chunk at 447 KB / 134 KB gzipped).
 
 ## 📌 Important Context & Decisions
 - **Database**: PostgreSQL (running locally or via Cloud/Neon). Connection via `DATABASE_URL`.
@@ -269,3 +284,22 @@
 - `client/src/features/board/components/RightSidebar.jsx` (MODIFIED — Added drag-to-resize and Tasks tab integration)
 - `client/src/features/board/BoardPage.jsx` (MODIFIED — Mounted `useTaskSocket`, fixed flexbox for resize)
 - `client/src/features/canvas/Canvas.jsx` (MODIFIED — Added ConvertStickyModal and wired context menu)
+
+## 📁 Files Created/Modified in Frontend Phase 5
+- `client/src/api/chat.api.js` (NEW — Chat REST API: send, get paginated, update, delete, thread replies)
+- `client/src/api/files.api.js` (NEW — Files REST API: signature, register, list, delete)
+- `client/src/api/activity.api.js` (NEW — Activity REST API: cursor-paginated board activities)
+- `client/src/stores/chatStore.js` (NEW — Chat Zustand store: cursor pagination, optimistic send, threads)
+- `client/src/sockets/useChatSocket.js` (NEW — Chat socket hook: new_message, updated, deleted)
+- `client/src/features/chat/ChatPanel.jsx` (NEW — Chat panel orchestrating message list + input + thread)
+- `client/src/features/chat/components/MessageList.jsx` (NEW — Infinite scroll up with IntersectionObserver)
+- `client/src/features/chat/components/MessageBubble.jsx` (NEW — Message with avatar, actions, edit, threads)
+- `client/src/features/chat/components/MessageInput.jsx` (NEW — Auto-growing textarea with Enter-to-send)
+- `client/src/features/chat/components/ThreadView.jsx` (NEW — Thread overlay with parent + replies)
+- `client/src/features/files/FilesPanel.jsx` (NEW — File list with upload button + preview)
+- `client/src/features/files/components/FileCard.jsx` (NEW — File card with type icons + actions)
+- `client/src/features/files/components/FileUploadButton.jsx` (NEW — XHR Cloudinary upload with progress)
+- `client/src/features/files/components/UploadProgress.jsx` (NEW — Inline progress bar per file)
+- `client/src/features/files/components/FilePreview.jsx` (NEW — Modal image preview)
+- `client/src/features/board/components/RightSidebar.jsx` (MODIFIED — Replaced Chat/Files placeholders with real components)
+- `client/src/features/board/BoardPage.jsx` (MODIFIED — Mounted useChatSocket hook)

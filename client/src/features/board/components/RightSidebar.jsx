@@ -2,6 +2,8 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import { ClipboardList, MessageCircle, FolderOpen, X, ChevronRight } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import TaskPanel from '@/features/tasks/TaskPanel';
+import ChatPanel from '@/features/chat/ChatPanel';
+import FilesPanel from '@/features/files/FilesPanel';
 
 const TABS = [
   { id: 'tasks', icon: ClipboardList, label: 'Tasks' },
@@ -148,18 +150,10 @@ export default function RightSidebar() {
           <TaskPanel />
         )}
         {activePanel === 'chat' && (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <MessageCircle size={40} className="text-slate-600 mb-3" />
-            <p className="text-sf-base text-slate-400 font-medium">Chat Panel</p>
-            <p className="text-sf-sm text-slate-500 mt-1">Coming in Phase 5</p>
-          </div>
+          <ChatPanel />
         )}
         {activePanel === 'files' && (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <FolderOpen size={40} className="text-slate-600 mb-3" />
-            <p className="text-sf-base text-slate-400 font-medium">Files Panel</p>
-            <p className="text-sf-sm text-slate-500 mt-1">Coming in Phase 5</p>
-          </div>
+          <FilesPanel />
         )}
       </div>
     </div>
