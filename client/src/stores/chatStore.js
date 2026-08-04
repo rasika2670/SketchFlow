@@ -129,8 +129,12 @@ export const useChatStore = create((set, get) => ({
   editMessage: async (boardId, messageId, newText) => {
     // Optimistic
     const previousMessages = get().messages;
+    const previousThreadMessages = get().threadMessages;
     set((state) => ({
       messages: state.messages.map((m) =>
+        m.id === messageId ? { ...m, message: newText, updated_at: new Date().toISOString() } : m
+      ),
+      threadMessages: state.threadMessages.map((m) =>
         m.id === messageId ? { ...m, message: newText, updated_at: new Date().toISOString() } : m
       ),
     }));
@@ -139,7 +143,7 @@ export const useChatStore = create((set, get) => ({
       await chatApi.updateMessage(boardId, messageId, { message: newText });
     } catch (error) {
       // Rollback
-      set({ messages: previousMessages });
+      set({ messages: previousMessages, threadMessages: previousThreadMessages });
       const message = error.response?.data?.message || 'Failed to edit message.';
       toast.error(message);
     }
@@ -148,14 +152,16 @@ export const useChatStore = create((set, get) => ({
   // ─── Delete message ────────────────────────────────────────────────────────
   deleteMsg: async (boardId, messageId) => {
     const previousMessages = get().messages;
+    const previousThreadMessages = get().threadMessages;
     set((state) => ({
       messages: state.messages.filter((m) => m.id !== messageId),
+      threadMessages: state.threadMessages.filter((m) => m.id !== messageId),
     }));
 
     try {
       await chatApi.deleteMessage(boardId, messageId);
     } catch (error) {
-      set({ messages: previousMessages });
+      set({ messages: previousMessages, threadMessages: previousThreadMessages });
       const message = error.response?.data?.message || 'Failed to delete message.';
       toast.error(message);
     }
@@ -178,6 +184,9 @@ export const useChatStore = create((set, get) => ({
       messages: state.messages.map((m) =>
         m.id === messageId ? { ...m, ...updates } : m
       ),
+      threadMessages: state.threadMessages.map((m) =>
+        m.id === messageId ? { ...m, ...updates } : m
+      ),
     }));
   },
 
@@ -185,6 +194,7 @@ export const useChatStore = create((set, get) => ({
   removeMessage: (messageId) => {
     set((state) => ({
       messages: state.messages.filter((m) => m.id !== messageId),
+      threadMessages: state.threadMessages.filter((m) => m.id !== messageId),
     }));
   },
 

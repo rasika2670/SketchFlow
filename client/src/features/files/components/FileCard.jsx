@@ -53,7 +53,7 @@ function FileCard({ file, onDelete, onPreview }) {
     ? formatDistanceToNow(new Date(file.created_at), { addSuffix: true })
     : '';
 
-  const filename = file.filename || file.original_name || 'Untitled';
+  const filename = file.name || file.filename || file.original_name || 'Untitled';
 
   return (
     <>
@@ -65,9 +65,15 @@ function FileCard({ file, onDelete, onPreview }) {
 
         {/* File info */}
         <div className="flex-1 min-w-0">
-          <p className="text-sf-sm font-medium text-slate-200 truncate" title={filename}>
+          <a 
+            href={file.url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-sf-sm font-medium text-slate-200 hover:text-primary-400 truncate block transition-colors" 
+            title={filename}
+          >
             {filename}
-          </p>
+          </a>
           <div className="flex items-center gap-2 text-[11px] text-slate-500">
             <span>{formatFileSize(file.size)}</span>
             {file.uploader_name && (

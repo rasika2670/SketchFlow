@@ -101,14 +101,14 @@ export default function FileUploadButton({ boardId, onUploadComplete }) {
 
       // Step 3: Register metadata on backend
       const { data: registerData } = await filesApi.registerUpload(boardId, {
-        filename: file.name,
+        name: file.name,
         url: cloudinaryResult.secure_url,
         public_id: cloudinaryResult.public_id,
         mime_type: file.type || cloudinaryResult.resource_type + '/' + cloudinaryResult.format,
         size: file.size,
       });
 
-      const serverFile = registerData.data?.file || registerData.file;
+      const serverFile = registerData.data;
 
       // Update upload status
       setUploads((prev) =>

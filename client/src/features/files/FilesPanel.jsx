@@ -26,7 +26,7 @@ export default function FilesPanel() {
     setIsLoading(true);
     try {
       const { data } = await filesApi.listByBoard(boardId);
-      const filesList = data.data?.files || data.files || [];
+      const filesList = Array.isArray(data.data) ? data.data : (data.data?.files || data.files || []);
       setFiles(filesList);
     } catch (error) {
       console.error('[FilesPanel] Failed to load files:', error);

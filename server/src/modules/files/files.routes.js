@@ -23,7 +23,7 @@ router.get(
 router.post(
   '/',
   requireBoardRole('admin', 'editor'),
-  validate(registerUploadSchema),
+  validate({ body: registerUploadSchema }),
   catchAsync(filesController.registerUpload)
 );
 

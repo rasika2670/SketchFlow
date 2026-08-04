@@ -36,19 +36,19 @@ const getUploadSignature = (boardId) => {
 /**
  * Register file upload metadata in PostgreSQL
  */
-const registerUpload = async (userId, boardId, { name, public_id, mime_type, size }) => {
+const registerUpload = async (userId, boardId, { name, public_id, mime_type, size, url }) => {
   const result = await query(
     `
     WITH inserted_file AS (
-      INSERT INTO files (board_id, name, public_id, mime_type, size, uploaded_by)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO files (board_id, name, public_id, mime_type, size, uploaded_by, url)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     )
     SELECT f.*, u.name as uploader_name, u.avatar_url as uploader_avatar
     FROM inserted_file f
     JOIN users u ON f.uploaded_by = u.id
     `,
-    [boardId, name, public_id, mime_type || null, size || null, userId]
+    [boardId, name, public_id, mime_type || null, size || null, userId, url || null]
   );
 
   await activityService.log(boardId, userId, 'file_uploaded', { fileId: result.rows[0].id, name });
