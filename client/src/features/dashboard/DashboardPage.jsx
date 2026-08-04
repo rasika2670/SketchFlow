@@ -117,18 +117,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="py-sf-1">
-                  {/* Theme toggle */}
-                  <button
-                    onClick={() => {
-                      toggleTheme();
-                      setShowProfileMenu(false);
-                    }}
-                    className="w-full flex items-center gap-sf-3 px-sf-4 py-sf-2 text-sf-sm text-slate-300 hover:bg-slate-700/50 hover:text-slate-50 transition-colors duration-sf-fast"
-                    id="theme-toggle-button"
-                  >
-                    {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-                    {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-                  </button>
+
 
                   {/* Logout */}
                   <button

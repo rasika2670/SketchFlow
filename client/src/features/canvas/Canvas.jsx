@@ -8,6 +8,7 @@ import RectangleElement from './components/RectangleElement';
 import CircleElement from './components/CircleElement';
 import StickyNoteElement from './components/StickyNoteElement';
 import LineElement from './components/LineElement';
+import ArrowElement from './components/ArrowElement';
 import TextElement from './components/TextElement';
 import ImageElement from './components/ImageElement';
 import SelectionBox from './components/SelectionBox';
@@ -21,6 +22,7 @@ const ELEMENT_COMPONENTS = {
   circle: CircleElement,
   sticky: StickyNoteElement,
   line: LineElement,
+  arrow: ArrowElement,
   text: TextElement,
   image: ImageElement,
 };
@@ -31,6 +33,7 @@ const DEFAULT_DIMENSIONS = {
   circle: { width: 100, height: 100 },
   sticky: { width: 200, height: 160 },
   line: { width: 200, height: 0 },
+  arrow: { width: 200, height: 0 },
   text: { width: 200, height: 40 },
   image: { width: 200, height: 150 },
 };

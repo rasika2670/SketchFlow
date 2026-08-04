@@ -6,6 +6,7 @@ import {
   Minus,
   Type,
   Image,
+  ArrowUpRight,
 } from 'lucide-react';
 import { useCanvasStore } from '@/stores/canvasStore';
 
@@ -20,6 +21,7 @@ const TOOLS = [
   { id: 'circle', icon: Circle, label: 'Circle (C)', key: 'c' },
   { id: 'sticky', icon: StickyNote, label: 'Sticky Note (S)', key: 's' },
   { id: 'line', icon: Minus, label: 'Line (L)', key: 'l' },
+  { id: 'arrow', icon: ArrowUpRight, label: 'Arrow (A)', key: 'a' },
   { id: 'text', icon: Type, label: 'Text (T)', key: 't' },
   { id: 'image', icon: Image, label: 'Image (I)', key: 'i' },
 ];

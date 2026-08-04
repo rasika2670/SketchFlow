@@ -14,13 +14,10 @@ export default function App() {
             position="bottom-right"
             toastOptions={{
               duration: 4000,
+              className: '!bg-sf-raised !text-slate-50 !border !border-slate-700 shadow-sf-overlay',
               style: {
-                background: '#1A1A24',
-                color: '#F4F4FC',
-                border: '1px solid #242430',
                 borderRadius: '8px',
                 fontSize: '14px',
-                boxShadow: '0 4px 12px rgba(0,0,10,0.5)',
               },
               success: {
                 iconTheme: {

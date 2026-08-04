@@ -20,27 +20,11 @@ export const useUIStore = create((set, get) => ({
     set({ activePanel: panel });
   },
 
-  toggleTheme: () => {
-    const newTheme = get().theme === 'dark' ? 'light' : 'dark';
-    set({ theme: newTheme });
-    localStorage.setItem('sf-theme', newTheme);
 
-    // Toggle dark class on <html>
-    if (newTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  },
 
   // Initialize theme from localStorage on app load
   initializeTheme: () => {
-    const theme = get().theme;
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    document.documentElement.classList.add('dark');
   },
 
   setConnectionStatus: (status) => {

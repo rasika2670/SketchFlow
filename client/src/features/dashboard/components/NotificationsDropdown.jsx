@@ -33,7 +33,7 @@ export default function NotificationsDropdown() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-hover transition-colors"
+        className="relative p-2 text-slate-400 hover:text-slate-200 rounded-full hover:bg-slate-800 transition-colors"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
@@ -42,8 +42,8 @@ export default function NotificationsDropdown() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-surface border border-default rounded-sf-lg shadow-xl z-50 overflow-hidden flex flex-col max-h-[400px]">
-          <div className="px-4 py-3 border-b border-default bg-raised font-medium text-text-primary flex justify-between items-center shrink-0">
+        <div className="absolute right-0 mt-2 w-80 bg-sf-raised border border-sf-default rounded-sf-lg shadow-sf-overlay z-50 overflow-hidden flex flex-col max-h-[400px]">
+          <div className="px-4 py-3 border-b border-sf-default bg-sf-deep font-medium text-sf-primary flex justify-between items-center shrink-0">
             <span>Notifications</span>
             {unreadCount > 0 && (
               <span className="text-xs bg-brand text-white px-2 py-0.5 rounded-full">
@@ -54,16 +54,16 @@ export default function NotificationsDropdown() {
 
           <div className="overflow-y-auto flex-1">
             {pendingInvites.length === 0 ? (
-              <div className="p-6 text-center text-text-secondary text-sm">
+              <div className="p-6 text-center text-slate-400 text-sm">
                 No new notifications.
               </div>
             ) : (
-              <ul className="divide-y divide-default">
+              <ul className="divide-y divide-sf-default">
                 {pendingInvites.map((invite) => (
-                  <li key={invite.id} className="p-4 hover:bg-surface-hover transition-colors">
+                  <li key={invite.id} className="p-4 hover:bg-slate-800/50 transition-colors">
                     <div className="flex flex-col gap-2">
-                      <p className="text-sm text-text-primary">
-                        <span className="font-semibold">{invite.invited_by_name}</span> invited you to join <span className="font-semibold">{invite.workspace_name}</span>
+                      <p className="text-sm text-slate-200">
+                        <span className="font-semibold text-primary-400">{invite.invited_by_name}</span> invited you to join <span className="font-semibold text-primary-400">{invite.workspace_name}</span>
                       </p>
                       
                       <div className="flex items-center justify-between mt-1">
