@@ -1,6 +1,8 @@
 const { query } = require('../../config/db');
 const ApiError = require('../../utils/ApiError');
 const logger = require('../../utils/logger');
+const { cloudinary } = require('../../config/cloudinary');
+const config = require('../../config/env');
 
 /**
  * Create a new board in a workspace.
@@ -107,6 +109,7 @@ async function update(boardId, { name }) {
 
 /**
  * Delete a board (CASCADE handles elements, tasks, messages, files).
+ * Also cleans up Cloudinary files.
  *
  * @param {string} boardId
  */
@@ -118,6 +121,18 @@ async function remove(boardId) {
 
   if (result.rows.length === 0) {
     throw ApiError.notFound('Board not found');
+  }
+
+  // Cleanup Cloudinary folder
+  if (config.cloudinary.apiSecret) {
+    try {
+      const folder = `sketchflow/boards/${boardId}`;
+      await cloudinary.api.delete_resources_by_prefix(folder);
+      await cloudinary.api.delete_folder(folder);
+      logger.info('Cloudinary folder deleted', { boardId });
+    } catch (err) {
+      logger.error('Failed to clean up Cloudinary files during board deletion', { error: err.message, boardId });
+    }
   }
 
   logger.info('Board deleted', { boardId });

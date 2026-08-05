@@ -189,9 +189,70 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
         setIsSelecting(true);
         setSelectionBox({ startX: pos.x, startY: pos.y, width: 0, height: 0 });
         useCanvasStore.getState().clearSelection();
+      } else if (tool === 'image') {
+        // Open file picker for image upload
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (ev) => {
+          const file = ev.target.files?.[0];
+          if (!file) return;
+          const objectUrl = URL.createObjectURL(file);
+          const socket = getBoardSocket();
+          if (!socket) return;
+
+          const tempId = generateTempId();
+          const dims = DEFAULT_DIMENSIONS.image;
+          const elementData = {
+            type: 'image',
+            x: pos.x,
+            y: pos.y,
+            ...dims,
+            text: objectUrl,
+          };
+
+          // Optimistic: add immediately
+          useCanvasStore.getState().addElement({ id: tempId, ...elementData, version: 1 });
+          useCanvasStore.getState().addPendingTemp(tempId, elementData);
+
+          socket.emit('element:created', {
+            boardId,
+            element: elementData,
+            tempId,
+          });
+
+          useCanvasStore.getState().setTool('select');
+        };
+        input.click();
+      } else {
+        // If a drawing tool is selected, create a new element on mousedown
+        const socket = getBoardSocket();
+        if (!socket) return;
+
+        const dims = DEFAULT_DIMENSIONS[tool] || { width: 100, height: 100 };
+        const tempId = generateTempId();
+        const elementData = {
+          type: tool,
+          x: pos.x,
+          y: pos.y,
+          ...dims,
+          color: fillColor,
+          text: tool === 'text' ? '' : tool === 'sticky' ? '' : null,
+        };
+
+        // Optimistic: add to store immediately with temp ID for instant visual feedback
+        useCanvasStore.getState().addElement({ id: tempId, ...elementData, version: 1 });
+
+        // Track the temp ID so useBoardSocket can reconcile when the server responds
+        useCanvasStore.getState().addPendingTemp(tempId, elementData);
+
+        socket.emit('element:created', { boardId, element: elementData, tempId });
+
+        // Switch back to select tool after creating
+        useCanvasStore.getState().setTool('select');
       }
     },
-    [tool, contextMenu, getPointerCanvasPos]
+    [tool, contextMenu, getPointerCanvasPos, boardId, fillColor]
   );
 
   const handleMouseMove = useCallback(
@@ -248,76 +309,12 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
       const clickedOnEmpty = e.target === e.target.getStage();
       if (!clickedOnEmpty) return;
 
-      const pos = getPointerCanvasPos();
-      if (!pos) return;
-
-      // If a drawing tool is selected, create a new element on click
-      if (tool !== 'select' && tool !== 'image') {
-        const socket = getBoardSocket();
-        if (!socket) return;
-
-        const dims = DEFAULT_DIMENSIONS[tool] || { width: 100, height: 100 };
-        const tempId = generateTempId();
-        const elementData = {
-          type: tool,
-          x: pos.x,
-          y: pos.y,
-          ...dims,
-          color: fillColor,
-          text: tool === 'text' ? '' : tool === 'sticky' ? '' : null,
-        };
-
-        // Optimistic: add to store immediately with temp ID for instant visual feedback
-        useCanvasStore.getState().addElement({ id: tempId, ...elementData, version: 1 });
-
-        // Track the temp ID so useBoardSocket can reconcile when the server responds
-        useCanvasStore.getState().addPendingTemp(tempId, elementData);
-
-        socket.emit('element:created', { boardId, element: elementData, tempId });
-
-        // Switch back to select tool after creating
-        useCanvasStore.getState().setTool('select');
-      } else if (tool === 'image') {
-        // Open file picker for image upload
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = (ev) => {
-          const file = ev.target.files?.[0];
-          if (!file) return;
-          const objectUrl = URL.createObjectURL(file);
-          const socket = getBoardSocket();
-          if (!socket) return;
-
-          const tempId = generateTempId();
-          const dims = DEFAULT_DIMENSIONS.image;
-          const elementData = {
-            type: 'image',
-            x: pos.x,
-            y: pos.y,
-            ...dims,
-            text: objectUrl,
-          };
-
-          // Optimistic: add immediately
-          useCanvasStore.getState().addElement({ id: tempId, ...elementData, version: 1 });
-          useCanvasStore.getState().addPendingTemp(tempId, elementData);
-
-          socket.emit('element:created', {
-            boardId,
-            element: elementData,
-            tempId,
-          });
-
-          useCanvasStore.getState().setTool('select');
-        };
-        input.click();
-      } else {
+      if (tool === 'select') {
         // Select tool — clear selection when clicking empty space
         useCanvasStore.getState().clearSelection();
       }
     },
-    [tool, boardId, fillColor, getPointerCanvasPos]
+    [tool]
   );
 
   // ─── Element event handlers ────────────────────────────────────────────

@@ -9,6 +9,7 @@ import { useChatSocket } from '@/sockets/useChatSocket';
 import { usePresence } from '@/sockets/usePresence';
 import { useLock } from '@/sockets/useLock';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 import BoardHeader from './components/BoardHeader';
 import Toolbar from './components/Toolbar';
@@ -69,6 +70,7 @@ export default function BoardPage() {
   const { sendCursorMove } = usePresence(boardId);
   const { requestLock, releaseLock } = useLock(boardId);
   useConnectionStatus();
+  useKeyboardShortcuts(boardId);
 
   return (
     <div className="h-screen w-screen flex flex-col bg-slate-950 overflow-hidden">

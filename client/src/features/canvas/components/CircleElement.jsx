@@ -39,25 +39,26 @@ const CircleElement = React.memo(function CircleElement({
   };
 
   return (
-    <Group id={id} ref={shapeRef} x={x} y={y} width={width} height={height}>
+    <Group
+      id={id}
+      ref={shapeRef}
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      draggable={!lockedBy}
+      onClick={handleClick}
+      onTap={handleClick}
+      onDragStart={() => onDragStart?.(id)}
+      onDragEnd={handleDragEnd}
+      onContextMenu={handleContextMenu}
+    >
       <Circle
         x={radius}
         y={radius}
         radius={radius}
         fill={color}
         opacity={lockedBy ? 0.6 : 1}
-        draggable={!lockedBy}
-        onClick={handleClick}
-        onTap={handleClick}
-        onDragStart={() => onDragStart?.(id)}
-        onDragEnd={(e) => {
-          const node = e.target;
-          onDragEnd?.(id, {
-            x: node.x() - radius,
-            y: node.y() - radius,
-          });
-        }}
-        onContextMenu={handleContextMenu}
         stroke={isSelected ? HANDLE_COLOR : 'transparent'}
         strokeWidth={isSelected ? 2 : 0}
         shadowColor="rgba(0,0,0,0.3)"

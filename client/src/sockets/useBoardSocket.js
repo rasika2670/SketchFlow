@@ -58,16 +58,15 @@ export function useBoardSocket(boardId) {
       store.addElement(element);
     };
 
-    const handleElementUpdated = ({ element, userId }) => {
-      if (userId !== currentUserId) {
-        useCanvasStore.getState().updateElement(element.id, element);
-      }
+    const handleElementUpdated = ({ element }) => {
+      // Always update our local store to ensure we capture the new 'version'
+      // from the server, preventing 409 Conflict errors on subsequent edits.
+      useCanvasStore.getState().updateElement(element.id, element);
     };
 
-    const handleElementMoved = ({ elementId, x, y, version, userId }) => {
-      if (userId !== currentUserId) {
-        useCanvasStore.getState().updateElement(elementId, { x, y, version });
-      }
+    const handleElementMoved = ({ elementId, x, y, version }) => {
+      // Always sync to get the new 'version'
+      useCanvasStore.getState().updateElement(elementId, { x, y, version });
     };
 
     const handleElementDeleted = ({ elementId, userId }) => {

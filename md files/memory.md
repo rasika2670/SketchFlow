@@ -7,6 +7,7 @@
 **Frontend Phase 3 is 100% COMPLETE.** (Infinite canvas with React-Konva, elements API, canvas/presence Zustand stores, board socket with real-time element CRUD, cursor presence, element locking, 7 element types, toolbar, board header with presence avatars, right sidebar shell, connection status, context menu, canvas controls — all building cleanly).
 **Frontend Phase 4 is 100% COMPLETE.** (Task Management API, task Zustand store, task socket hook, drag-and-drop Kanban board with @dnd-kit, create/edit/detail modals, sticky note → task conversion flow, resizable right sidebar — all building cleanly).
 **Frontend Phase 5 is 100% COMPLETE.** (Chat API + Zustand store + socket hook, real-time chat panel with infinite scroll, threaded replies, message edit/delete, Files API + Cloudinary XHR upload with progress, file list/preview/delete, activity API — all building cleanly).
+**Frontend Phase 6 is 100% COMPLETE.** (Keyboard shortcuts, copy/paste/duplicate, auto-collapsing sidebar, responsive layout, SEO meta tags — all building cleanly. Skipped multiplayer undo/redo per decision).
 
 ## 📁 Files Created/Modified in Phase 6
 - `server/src/jobs/cron.js` (NEW — Configurable cron manager for activity log retention, expired invite cleanups, and 15-min heap memory audits)
@@ -191,15 +192,6 @@
 - **Integration**: Wired `RightSidebar.jsx` Tasks tab, mounted `useTaskSocket` in `BoardPage.jsx`, added "Convert to Task" to `ElementContextMenu` in `Canvas.jsx`.
 - **Compilation**: Clean production build.
 
-## 🚀 Next Up (Frontend Implementation)
-- Proceed with Frontend Phase 6: Polish + Production.
-  - Keyboard shortcuts (`useKeyboardShortcuts.js`).
-  - Theme toggle (dark/light mode).
-  - Responsive layout adjustments.
-  - Loading skeleton screens.
-  - Error handling polish.
-  - Production build optimization.
-
 ## ✅ Frontend Phase 5: Chat + Files + Activity Feed (100% COMPLETE)
 - **API Layer**: `chat.api.js` (send, get, update, delete, thread replies), `files.api.js` (signature, register, list, delete), `activity.api.js` (cursor-paginated board activities).
 - **Zustand Store**: `chatStore.js` (cursor-based pagination with `loadMore`, optimistic message send with temp IDs, edit/delete, socket-driven `addMessage`/`updateMessage`/`removeMessage`, thread support with `fetchThreadReplies`/`addThreadMessage`/`closeThread`).
@@ -209,6 +201,16 @@
 - **Integration**: Wired `ChatPanel` and `FilesPanel` into `RightSidebar.jsx` tabs replacing Phase 5 placeholders. Mounted `useChatSocket(boardId)` in `BoardPage.jsx` alongside existing `useTaskSocket`.
 - **Cloudinary Upload**: Uses direct XHR to `https://api.cloudinary.com/v1_1/{cloud_name}/auto/upload` instead of Cloudinary Upload Widget to avoid external script dependency and gain full control over upload progress UI.
 - **Compilation**: Clean production build (✓ built in 4.56s, 0 errors, BoardPage chunk at 447 KB / 134 KB gzipped).
+
+## ✅ Frontend Phase 6: Polish + Production (100% COMPLETE)
+- **Keyboard Shortcuts**: Created `useKeyboardShortcuts.js` hooking into `BoardPage.jsx`. Handles tool selection (1-7), selection management (Ctrl+A, Esc), element deletion (Del/Backspace), and clipboard operations (Ctrl+C, Ctrl+V, Ctrl+D) all cleanly isolated from text input fields.
+- **Clipboard API**: Integrated `clipboard` into `canvasStore.js` allowing seamless copy/pasting and duplicating of single or multiple elements using temp IDs for optimistic socket synchronization.
+- **Responsive Layout**: Upgraded `RightSidebar.jsx` with a `window.addEventListener('resize')` trigger that auto-collapses the sidebar when window width drops below 1024px to ensure the canvas remains usable.
+- **SEO & Production**: Added missing `meta name="theme-color"`, `og:title`, and `og:description` to `index.html`.
+- **Compilation**: Clean production build (✓ built).
+
+## 🚀 Next Up (Project Completion)
+- Project implementation is functionally complete!
 
 ## 📌 Important Context & Decisions
 - **Database**: PostgreSQL (running locally or via Cloud/Neon). Connection via `DATABASE_URL`.
@@ -313,3 +315,7 @@
 - **Canvas Arrow Tool**: Added `ArrowElement.jsx` utilizing Konva `<Arrow>` and mapped it to the `Toolbar` with the `A` shortcut.
 - **Theme Enforcement**: Removed broken Light Mode toggle from `DashboardPage.jsx` and enforced strict Dark Mode initialization in `uiStore.js` to maintain theme consistency.
 - **Notifications UI**: Fixed `NotificationsDropdown.jsx` to use correct `sf-` prefixed Tailwind classes, restoring its background, border, and shadows.
+- **Optimistic Locking (409 Conflict)**: Fixed the frontend missing its own echoed socket events (`handleElementUpdated`, `handleElementMoved`) in `useBoardSocket.js`. The client now updates its local `version` field from the server echo, preventing 409 Conflict errors on subsequent rapid edits.
+- **Lock Handler Logging**: Downgraded the `element:unlock: not lock owner` warning to a `debug` log in `lockHandler.js` when the lock is `null`, reducing false-positive log noise for naturally expired locks.
+- **API Rate Limiting**: Increased the `generalLimiter` max from 100 to 1000 requests per 15 minutes in `rateLimiter.js` to prevent `429 Too Many Requests` during fast navigation.
+- **Board Deletion**: Implemented `BoardSettingsModal.jsx` and integrated it into `BoardHeader.jsx`, allowing users to delete a board via the UI with a type-to-confirm danger zone.

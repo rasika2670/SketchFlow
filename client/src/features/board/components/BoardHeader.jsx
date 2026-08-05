@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Settings } from 'lucide-react';
 import { usePresenceStore } from '@/stores/presenceStore';
 import { useAuthStore } from '@/stores/authStore';
 import Avatar from '@/features/shared/Avatar';
 import ConnectionStatus from './ConnectionStatus';
+import BoardSettingsModal from './BoardSettingsModal';
 
 /**
  * BoardHeader — fixed top bar with board navigation, presence avatars, and connection status.
@@ -13,6 +15,7 @@ export default function BoardHeader({ board }) {
   const navigate = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
   const onlineUsers = usePresenceStore((s) => s.onlineUsers);
+  const [showSettings, setShowSettings] = useState(false);
 
   const onlineUserList = Object.values(onlineUsers).filter(
     (u) => u.id !== currentUser?.id
@@ -83,12 +86,23 @@ export default function BoardHeader({ board }) {
 
         {/* Settings gear */}
         <button
+          onClick={() => setShowSettings(true)}
           className="p-1.5 rounded-sf-sm text-slate-400 hover:text-slate-50 hover:bg-slate-700/50 transition-colors"
           title="Board settings"
         >
           <Settings size={18} />
         </button>
       </div>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <BoardSettingsModal
+          isOpen={showSettings}
+          onClose={() => setShowSettings(false)}
+          board={board}
+          onDeleted={handleBack}
+        />
+      )}
     </header>
   );
 }

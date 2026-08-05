@@ -15,6 +15,7 @@ const StickyNoteElement = React.memo(function StickyNoteElement({
   lockedBy,
   onSelect,
   onDragStart,
+  onDragEnd,
   onDblClick,
   onContextMenu,
   shapeRef,

@@ -79,6 +79,23 @@ export default function RightSidebar() {
     };
   }, [isResizing]);
 
+  // ─── Auto-collapse on small screens ──────────────────────────────────────
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024 && useUIStore.getState().sidebarOpen) {
+        useUIStore.getState().toggleSidebar();
+      }
+    };
+    
+    // Check initially
+    if (window.innerWidth < 1024 && sidebarOpen) {
+      useUIStore.getState().toggleSidebar();
+    }
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [sidebarOpen]);
+
   if (!sidebarOpen) {
     return (
       <button

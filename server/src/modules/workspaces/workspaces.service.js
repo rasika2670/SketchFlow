@@ -3,6 +3,8 @@ const ApiError = require('../../utils/ApiError');
 const logger = require('../../utils/logger');
 const { sendEmail } = require('../../services/email.service');
 const activityService = require('../activity/activity.service');
+const { cloudinary } = require('../../config/cloudinary');
+const config = require('../../config/env');
 
 /**
  * Create a new workspace.
@@ -144,6 +146,15 @@ async function update(workspaceId, { name, description }) {
  * @param {string} workspaceId
  */
 async function remove(workspaceId) {
+  // Find all boards so we can clean up their Cloudinary folders
+  let boardIds = [];
+  try {
+    const boards = await query('SELECT id FROM boards WHERE workspace_id = $1', [workspaceId]);
+    boardIds = boards.rows.map(r => r.id);
+  } catch (err) {
+    logger.error('Failed to fetch boards for Cloudinary cleanup', { error: err.message, workspaceId });
+  }
+
   const result = await query(
     'DELETE FROM workspaces WHERE id = $1 RETURNING id',
     [workspaceId]
@@ -151,6 +162,19 @@ async function remove(workspaceId) {
 
   if (result.rows.length === 0) {
     throw ApiError.notFound('Workspace not found');
+  }
+
+  // Cleanup Cloudinary folders for all boards in this workspace
+  if (config.cloudinary.apiSecret && boardIds.length > 0) {
+    for (const boardId of boardIds) {
+      try {
+        const folder = `sketchflow/boards/${boardId}`;
+        await cloudinary.api.delete_resources_by_prefix(folder);
+        await cloudinary.api.delete_folder(folder);
+      } catch (err) {
+        logger.error('Failed to clean up Cloudinary files during workspace deletion', { error: err.message, boardId, workspaceId });
+      }
+    }
   }
 
   logger.info('Workspace deleted', { workspaceId });

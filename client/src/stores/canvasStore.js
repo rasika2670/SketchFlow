@@ -26,8 +26,16 @@ export const useCanvasStore = create((set, get) => ({
   fillColor: '#6E56CF', // Default fill color for new elements
   lockedElements: {}, // { [elementId]: { userId, userName } }
   pendingTempIds: new Map(), // Map<tempId, elementData> for optimistic creation reconciliation
+  clipboard: [], // Array of copied element data
 
   // ─── Element CRUD ───────────────────────────────────────────────────────────
+
+  /** Copy selected elements to clipboard */
+  copyElements: () => {
+    const { elements, selectedIds } = get();
+    const copied = elements.filter(el => selectedIds.includes(el.id));
+    set({ clipboard: copied });
+  },
 
   /** Replace entire elements array (used on initial load / full resync) */
   setElements: (elements) => {

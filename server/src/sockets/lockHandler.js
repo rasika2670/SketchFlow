@@ -71,18 +71,25 @@ function lockHandler(io, socket) {
 
         logger.info('element:lock acquired', { elementId, userId, boardId });
       } else {
-        // Lock already held by another user
+        // Lock already held
         const currentHolder = await redis.get(key);
         const ttl = await redis.ttl(key);
 
-        socket.emit('element:lock:denied', {
-          elementId,
-          boardId,
-          lockedBy: currentHolder,
-          ttl,
-        });
-
-        logger.info('element:lock denied', { elementId, userId, currentHolder });
+        if (currentHolder === userId) {
+          // Re-acquiring own lock — refresh TTL and emit acquired
+          await redis.expire(key, LOCK_TTL_SECONDS);
+          socket.emit('element:lock:acquired', { elementId, boardId });
+          logger.debug('element:lock re-acquired by same user', { elementId, userId });
+        } else {
+          // Held by someone else
+          socket.emit('element:lock:denied', {
+            elementId,
+            boardId,
+            lockedBy: currentHolder,
+            ttl,
+          });
+          logger.info('element:lock denied', { elementId, userId, currentHolder });
+        }
       }
     } catch (err) {
       logger.error('element:lock Redis error', { error: err.message, elementId });
@@ -109,7 +116,11 @@ function lockHandler(io, socket) {
 
       if (currentHolder !== userId) {
         // Not the lock owner — silently ignore (could be expired + re-acquired)
-        logger.warn('element:unlock: not lock owner', { elementId, userId, currentHolder });
+        if (currentHolder === null) {
+          logger.debug('element:unlock: lock already expired', { elementId, userId });
+        } else {
+          logger.warn('element:unlock: not lock owner', { elementId, userId, currentHolder });
+        }
         return;
       }
 
