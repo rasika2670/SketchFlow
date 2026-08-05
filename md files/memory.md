@@ -258,6 +258,7 @@
 - `client/src/features/canvas/components/LineElement.jsx` (NEW — Konva Line with wide hit area)
 - `client/src/features/canvas/components/TextElement.jsx` (NEW — Editable text with dashed selection border)
 - `client/src/features/canvas/components/ImageElement.jsx` (NEW — Async image loading with placeholder)
+- `client/src/features/canvas/components/ArrowElement.jsx` (NEW — Konva Arrow with handles)
 - `client/src/features/canvas/components/SelectionBox.jsx` (NEW — Blue dashed selection rectangle)
 - `client/src/features/canvas/components/CursorOverlay.jsx` (NEW — Other users' cursor arrows + name pills)
 - `client/src/features/canvas/components/LockIndicator.jsx` (NEW — 🔒 badge with user name)
@@ -303,3 +304,12 @@
 - `client/src/features/files/components/FilePreview.jsx` (NEW — Modal image preview)
 - `client/src/features/board/components/RightSidebar.jsx` (MODIFIED — Replaced Chat/Files placeholders with real components)
 - `client/src/features/board/BoardPage.jsx` (MODIFIED — Mounted useChatSocket hook)
+
+## 🛠️ Recent Bug Fixes & Refinements (Post-Phase 5)
+- **Chat Layout**: Redesigned `MessageBubble.jsx` to use a WhatsApp/Instagram style layout (own messages right-aligned in primary color, others left-aligned in slate).
+- **Chat Thread Deletion**: Fixed 404 Not Found error in `chatStore.js` when deleting thread messages by ensuring thread messages are purged from local state alongside main messages.
+- **File Upload API**: Added missing `url` column to `files` DB table. Fixed Joi validation in `files.routes.js` to correctly pass `{ body: schema }`. Updated `files.service.js` to accept and return the Cloudinary URL.
+- **Files UI**: Fixed frontend missing files on reload by correctly extracting the array from `data.data` in `FilesPanel.jsx`. Fixed `FileCard.jsx` to correctly display the file name and made the title a clickable link to open the file in a new tab.
+- **Canvas Arrow Tool**: Added `ArrowElement.jsx` utilizing Konva `<Arrow>` and mapped it to the `Toolbar` with the `A` shortcut.
+- **Theme Enforcement**: Removed broken Light Mode toggle from `DashboardPage.jsx` and enforced strict Dark Mode initialization in `uiStore.js` to maintain theme consistency.
+- **Notifications UI**: Fixed `NotificationsDropdown.jsx` to use correct `sf-` prefixed Tailwind classes, restoring its background, border, and shadows.

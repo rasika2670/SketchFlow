@@ -4,7 +4,7 @@ const ApiError = require('../../utils/ApiError');
 /**
  * Send a new chat message
  */
-const sendMessage = async (userId, boardId, { message, parentId }) => {
+const sendMessage = async (userId, boardId, { message, parentId, attachmentId }) => {
   // If parentId is provided, verify it exists and belongs to the same board
   if (parentId) {
     const parentResult = await query(
@@ -20,15 +20,17 @@ const sendMessage = async (userId, boardId, { message, parentId }) => {
   const result = await query(
     `
     WITH inserted_message AS (
-      INSERT INTO chat_messages (board_id, user_id, message, parent_id)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO chat_messages (board_id, user_id, message, parent_id, attachment_id)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     )
-    SELECT m.*, u.name as user_name, u.avatar_url as user_avatar
+    SELECT m.*, u.name as user_name, u.avatar_url as user_avatar,
+           f.name as file_name, f.url as file_url, f.mime_type as file_mime_type, f.size as file_size
     FROM inserted_message m
     JOIN users u ON m.user_id = u.id
+    LEFT JOIN files f ON m.attachment_id = f.id
     `,
-    [boardId, userId, message, parentId || null]
+    [boardId, userId, message, parentId || null, attachmentId || null]
   );
 
   return result.rows[0];
@@ -93,9 +95,11 @@ const deleteMessage = async (userId, messageId) => {
 const getMessages = async (boardId, { cursor_created_at, cursor_id, limit = 50 }) => {
   let queryStr = `
     SELECT m.*, u.name as user_name, u.avatar_url as user_avatar,
+           f.name as file_name, f.url as file_url, f.mime_type as file_mime_type, f.size as file_size,
            (SELECT COUNT(*) FROM chat_messages r WHERE r.parent_id = m.id AND r.deleted_at IS NULL) as reply_count
     FROM chat_messages m
     JOIN users u ON m.user_id = u.id
+    LEFT JOIN files f ON m.attachment_id = f.id
     WHERE m.board_id = $1 AND m.parent_id IS NULL AND m.deleted_at IS NULL
   `;
   const params = [boardId];
@@ -121,9 +125,11 @@ const getMessages = async (boardId, { cursor_created_at, cursor_id, limit = 50 }
 const getThreadReplies = async (parentId) => {
   const result = await query(
     `
-    SELECT m.*, u.name as user_name, u.avatar_url as user_avatar
+    SELECT m.*, u.name as user_name, u.avatar_url as user_avatar,
+           f.name as file_name, f.url as file_url, f.mime_type as file_mime_type, f.size as file_size
     FROM chat_messages m
     JOIN users u ON m.user_id = u.id
+    LEFT JOIN files f ON m.attachment_id = f.id
     WHERE m.parent_id = $1 AND m.deleted_at IS NULL
     ORDER BY m.created_at ASC
     `,

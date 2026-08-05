@@ -2,7 +2,8 @@ const Joi = require('joi');
 
 const sendMessageSchema = Joi.object({
   message: Joi.string().trim().min(1).max(5000).required(),
-  parent_id: Joi.string().uuid().optional().allow(null)
+  parent_id: Joi.string().uuid().optional().allow(null),
+  attachment_id: Joi.string().uuid().optional().allow(null)
 });
 
 const updateMessageSchema = Joi.object({

@@ -8,11 +8,12 @@ const { getIO } = require('../../sockets');
 const sendMessage = async (req, res) => {
   const { boardId } = req.params;
   const userId = req.user.id;
-  const { message, parent_id } = req.body;
+  const { message, parent_id, attachment_id } = req.body;
 
   const newMessage = await chatService.sendMessage(userId, boardId, {
     message,
-    parentId: parent_id
+    parentId: parent_id,
+    attachmentId: attachment_id
   });
 
   // Broadcast to board room

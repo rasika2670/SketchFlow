@@ -1,6 +1,6 @@
 import { useState, memo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Reply, Pencil, Trash2, Check, X, MessageSquare } from 'lucide-react';
+import { Reply, Pencil, Trash2, Check, X, MessageSquare, FileIcon, Download } from 'lucide-react';
 import { useChatStore } from '@/stores/chatStore';
 import { useAuthStore } from '@/stores/authStore';
 import Avatar from '@/features/shared/Avatar';
@@ -69,6 +69,10 @@ function MessageBubble({ message, boardId }) {
   const openThread = () => {
     fetchThreadReplies(boardId, message.id);
   };
+
+  const hasAttachment = !!message.file_url;
+  const isImage = hasAttachment && message.file_mime_type?.startsWith('image/');
+  const isAutoMessage = hasAttachment && message.message === `Attached: ${message.file_name}`;
 
   return (
     <div
@@ -140,14 +144,51 @@ function MessageBubble({ message, boardId }) {
               </div>
             </div>
           ) : (
-            <>
-              {message.message}
-              {wasEdited && (
-                <span className={`inline-block ml-2 text-[10px] italic ${isOwn ? 'text-white/60' : 'text-slate-500'}`}>
-                  (edited)
-                </span>
+            <div className="flex flex-col gap-1">
+              {hasAttachment && (
+                <div className={`rounded-sf-sm overflow-hidden border ${isOwn ? 'border-white/10 bg-black/10' : 'border-slate-700 bg-slate-900/50'} max-w-xs mt-1 mb-1`}>
+                  {isImage ? (
+                    <a href={message.file_url} target="_blank" rel="noopener noreferrer" className="block">
+                      <img 
+                        src={message.file_url} 
+                        alt={message.file_name} 
+                        className="max-w-full max-h-48 object-contain cursor-pointer hover:opacity-90 transition-opacity" 
+                      />
+                    </a>
+                  ) : (
+                    <a 
+                      href={message.file_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-2 hover:bg-black/20 transition-colors"
+                    >
+                      <div className={`p-2 rounded-sf-sm ${isOwn ? 'bg-primary-500 text-white' : 'bg-slate-700 text-primary-400'}`}>
+                        <FileIcon size={16} />
+                      </div>
+                      <div className="flex flex-col min-w-0 pr-2">
+                        <span className="text-sm font-medium truncate leading-tight">
+                          {message.file_name}
+                        </span>
+                        <span className="text-[10px] opacity-70">
+                          {message.file_size ? (message.file_size / 1024).toFixed(1) + ' KB' : 'Unknown size'}
+                        </span>
+                      </div>
+                      <Download size={14} className="ml-auto opacity-70 flex-shrink-0" />
+                    </a>
+                  )}
+                </div>
               )}
-            </>
+              {(!hasAttachment || !isAutoMessage) && (
+                <div>
+                  {message.message}
+                  {wasEdited && (
+                    <span className={`inline-block ml-2 text-[10px] italic ${isOwn ? 'text-white/60' : 'text-slate-500'}`}>
+                      (edited)
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
 

@@ -9,10 +9,11 @@ import EmptyState from '@/features/shared/EmptyState';
 import LoadingSpinner from '@/features/shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 
+import { getBoardSocket } from '@/sockets/socket';
+
 /**
  * FilesPanel — file list with upload button, displayed inside the right sidebar.
- * Manages local state for the files array (no Zustand store needed since files
- * are a simpler domain — no real-time socket updates besides file:deleted).
+ * Manages local state for the files array.
  */
 export default function FilesPanel() {
   const { boardId } = useParams();
@@ -39,9 +40,42 @@ export default function FilesPanel() {
     fetchFiles();
   }, [fetchFiles]);
 
+  // ─── Socket Listeners ──────────────────────────────────────────────────
+  useEffect(() => {
+    const socket = getBoardSocket();
+    if (!socket) return;
+
+    const handleFileUploaded = (newFile) => {
+      setFiles((prev) => {
+        // Prevent duplicates
+        if (prev.some((f) => f.id === newFile.id)) return prev;
+        return [newFile, ...prev];
+      });
+    };
+
+    const handleFileDeleted = ({ id }) => {
+      setFiles((prev) => prev.filter((f) => f.id !== id));
+    };
+
+    socket.on('file:uploaded', handleFileUploaded);
+    socket.on('file:deleted', handleFileDeleted);
+
+    return () => {
+      socket.off('file:uploaded', handleFileUploaded);
+      socket.off('file:deleted', handleFileDeleted);
+    };
+  }, []);
+
   // ─── Handle upload complete ────────────────────────────────────────────
   const handleUploadComplete = (newFile) => {
-    setFiles((prev) => [newFile, ...prev]);
+    // Rely on socket for UI update, or do optimistic update if needed.
+    // For now, since FileUploadButton triggers the API, the API broadcasts
+    // 'file:uploaded' to all clients including sender.
+    // To avoid duplicates, socket handler deduplicates.
+    setFiles((prev) => {
+      if (prev.some((f) => f.id === newFile.id)) return prev;
+      return [newFile, ...prev];
+    });
   };
 
   // ─── Handle file delete ────────────────────────────────────────────────
