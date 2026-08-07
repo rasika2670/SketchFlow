@@ -12,13 +12,13 @@ const activityService = require('../activity/activity.service');
  * @returns {Promise<Object>} Created element
  */
 async function create(userId, boardId, elementData) {
-  const { type, x = 0, y = 0, width = null, height = null, color = null, text = null } = elementData;
+  const { type, x = 0, y = 0, width = null, height = null, color = null, text = null, properties = {} } = elementData;
 
   const result = await query(
-    `INSERT INTO elements (board_id, type, x, y, width, height, color, text, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-     RETURNING id, board_id, type, x, y, width, height, color, text, version, created_by, created_at, updated_at`,
-    [boardId, type, x, y, width, height, color, text, userId]
+    `INSERT INTO elements (board_id, type, x, y, width, height, color, text, properties, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     RETURNING id, board_id, type, x, y, width, height, color, text, properties, version, created_by, created_at, updated_at`,
+    [boardId, type, x, y, width, height, color, text, properties, userId]
   );
 
   logger.info('Element created', {
@@ -41,7 +41,7 @@ async function create(userId, boardId, elementData) {
  */
 async function getByBoardId(boardId) {
   const result = await query(
-    `SELECT id, board_id, type, x, y, width, height, color, text, version,
+    `SELECT id, board_id, type, x, y, width, height, color, text, properties, version,
             created_by, created_at, updated_at
      FROM elements
      WHERE board_id = $1 AND deleted_at IS NULL
@@ -60,7 +60,7 @@ async function getByBoardId(boardId) {
  */
 async function getById(elementId) {
   const result = await query(
-    `SELECT id, board_id, type, x, y, width, height, color, text, version,
+    `SELECT id, board_id, type, x, y, width, height, color, text, properties, version,
             created_by, created_at, updated_at, deleted_at
      FROM elements
      WHERE id = $1`,
@@ -86,7 +86,7 @@ async function getById(elementId) {
  */
 async function update(elementId, updates, expectedVersion) {
   // Build a dynamic SET clause from provided fields (excluding version)
-  const allowedFields = ['x', 'y', 'width', 'height', 'color', 'text'];
+  const allowedFields = ['x', 'y', 'width', 'height', 'color', 'text', 'properties'];
   const setClauses = [];
   const values = [];
   let paramIndex = 1;
@@ -114,7 +114,7 @@ async function update(elementId, updates, expectedVersion) {
     UPDATE elements
     SET ${setClauses.join(', ')}
     WHERE id = $${paramIndex} AND version = $${paramIndex + 1} AND deleted_at IS NULL
-    RETURNING id, board_id, type, x, y, width, height, color, text, version,
+    RETURNING id, board_id, type, x, y, width, height, color, text, properties, version,
               created_by, created_at, updated_at
   `;
 

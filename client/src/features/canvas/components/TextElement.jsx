@@ -25,7 +25,12 @@ const TextElement = React.memo(function TextElement({
     width = 200,
     text = 'Double-click to edit',
     color = '#F4F4FC',
+    properties = {},
   } = element;
+
+  const textColor = properties.fillColor || properties.strokeColor || color;
+  const baseOpacity = properties.opacity !== undefined ? properties.opacity : 1;
+  const finalOpacity = lockedBy ? baseOpacity * 0.6 : baseOpacity;
 
   const handleClick = (e) => {
     e.cancelBubble = true;
@@ -79,26 +84,14 @@ const TextElement = React.memo(function TextElement({
         text={text || 'Double-click to edit'}
         fontSize={16}
         fontFamily="Inter, system-ui, sans-serif"
-        fill={color}
-        opacity={lockedBy ? 0.6 : 1}
+        fill={textColor}
+        opacity={finalOpacity}
         width={width}
         wrap="word"
         lineHeight={1.5}
       />
 
-      {/* Selection border */}
-      {isSelected && (
-        <Rect
-          x={-4}
-          y={-4}
-          width={width + 8}
-          height={48}
-          fill="transparent"
-          stroke={HANDLE_COLOR}
-          strokeWidth={1}
-          dash={[4, 4]}
-        />
-      )}
+
     </Group>
   );
 });

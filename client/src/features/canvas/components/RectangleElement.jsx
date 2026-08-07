@@ -17,7 +17,17 @@ const RectangleElement = React.memo(function RectangleElement({
   onContextMenu,
   shapeRef,
 }) {
-  const { id, x, y, width = 150, height = 100, color = '#6E56CF' } = element;
+  const { id, x, y, width = 150, height = 100, color = '#6E56CF', properties = {} } = element;
+  
+  const fill = properties.fillColor || color || 'transparent';
+  const strokeColor = properties.strokeColor || 'transparent';
+  const strokeWidth = properties.strokeWidth || 0;
+  const dashLength = strokeWidth * 2;
+  const gapLength = strokeWidth * 2;
+  const dash = properties.strokeStyle === 'dashed' ? [dashLength, gapLength] : properties.strokeStyle === 'dotted' ? [0.1, gapLength] : [];
+  const baseOpacity = properties.opacity !== undefined ? properties.opacity : 1;
+  const finalOpacity = lockedBy ? baseOpacity * 0.6 : baseOpacity;
+  const radius = properties.edges === 'round' ? 16 : 4;
 
   const handleDragEnd = (e) => {
     const node = e.target;
@@ -46,17 +56,20 @@ const RectangleElement = React.memo(function RectangleElement({
         y={y}
         width={width}
         height={height}
-        fill={color}
-        opacity={lockedBy ? 0.6 : 1}
-        cornerRadius={4}
+        fill={fill}
+        opacity={finalOpacity}
+        cornerRadius={radius}
         draggable={!lockedBy}
         onClick={handleClick}
         onTap={handleClick}
         onDragStart={() => onDragStart?.(id)}
         onDragEnd={handleDragEnd}
         onContextMenu={handleContextMenu}
-        stroke={isSelected ? HANDLE_COLOR : 'transparent'}
-        strokeWidth={isSelected ? 2 : 0}
+        stroke={strokeColor}
+        strokeWidth={strokeWidth}
+        dash={dash}
+        lineCap="round"
+        lineJoin="round"
         shadowColor="rgba(0,0,0,0.3)"
         shadowBlur={isSelected ? 8 : 4}
         shadowOffset={{ x: 0, y: 2 }}

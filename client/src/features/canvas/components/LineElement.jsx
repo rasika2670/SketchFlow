@@ -23,7 +23,16 @@ const LineElement = React.memo(function LineElement({
     width = 200,
     height = 0,
     color = '#F4F4FC',
+    properties = {},
   } = element;
+
+  const strokeColor = properties.strokeColor || color;
+  const strokeWidth = properties.strokeWidth || 2;
+  const dashLength = strokeWidth * 2;
+  const gapLength = strokeWidth * 2;
+  const dash = properties.strokeStyle === 'dashed' ? [dashLength, gapLength] : properties.strokeStyle === 'dotted' ? [0.1, gapLength] : [];
+  const baseOpacity = properties.opacity !== undefined ? properties.opacity : 1;
+  const finalOpacity = lockedBy ? baseOpacity * 0.6 : baseOpacity;
 
   // Line is drawn from (0, 0) to (width, height) within the group
   const points = [0, 0, width, height];
@@ -72,9 +81,10 @@ const LineElement = React.memo(function LineElement({
       {/* Visible line */}
       <Line
         points={points}
-        stroke={color}
-        strokeWidth={2}
-        opacity={lockedBy ? 0.6 : 1}
+        stroke={strokeColor}
+        strokeWidth={strokeWidth}
+        opacity={finalOpacity}
+        dash={dash}
         lineCap="round"
         lineJoin="round"
       />

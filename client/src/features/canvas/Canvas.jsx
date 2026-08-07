@@ -16,6 +16,7 @@ import CursorOverlay from './components/CursorOverlay';
 import LockIndicator from './components/LockIndicator';
 import ElementContextMenu from './components/ElementContextMenu';
 import ConvertStickyModal from '@/features/tasks/components/ConvertStickyModal';
+import PropertiesPanel from './components/PropertiesPanel';
 
 const ELEMENT_COMPONENTS = {
   rectangle: RectangleElement,
@@ -76,6 +77,8 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
     }
   }, [selectedIds, elements, lockedElements]);
 
+  const isSpacePanning = useCanvasStore((s) => s.isSpacePanning);
+
   // ─── Local state ────────────────────────────────────────────────────────
   const [selectionBox, setSelectionBox] = useState(null);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -124,16 +127,23 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
     const vy = -panOffset.y;
     const padding = 100; // render slightly outside viewport for smooth panning
 
-    return elements.filter((el) => {
-      const ew = el.width || 200;
-      const eh = el.height || 200;
-      return (
-        el.x + ew > vx - padding &&
-        el.x < vx + vw + padding &&
-        el.y + eh > vy - padding &&
-        el.y < vy + vh + padding
-      );
-    });
+    return elements
+      .filter((el) => {
+        const ew = el.width || 200;
+        const eh = el.height || 200;
+        return (
+          el.x + ew > vx - padding &&
+          el.x < vx + vw + padding &&
+          el.y + eh > vy - padding &&
+          el.y < vy + vh + padding
+        );
+      })
+      .sort((a, b) => {
+        const aZ = a.properties?.z_index || 0;
+        const bZ = b.properties?.z_index || 0;
+        if (aZ !== bZ) return aZ - bZ;
+        return new Date(a.created_at) - new Date(b.created_at);
+      });
   }, [elements, zoom, panOffset, containerSize]);
 
   // ─── Wheel zoom (zoom toward cursor) ───────────────────────────────────
@@ -184,7 +194,7 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
       const pos = getPointerCanvasPos();
       if (!pos) return;
 
-      if (tool === 'select') {
+      if (tool === 'select' && !isSpacePanning) {
         // Start selection box
         setIsSelecting(true);
         setSelectionBox({ startX: pos.x, startY: pos.y, width: 0, height: 0 });
@@ -243,6 +253,12 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
         // Optimistic: add to store immediately with temp ID for instant visual feedback
         useCanvasStore.getState().addElement({ id: tempId, ...elementData, version: 1 });
 
+        useCanvasStore.getState().pushHistory({
+          type: 'CREATE',
+          elementId: tempId,
+          nextData: { ...elementData, version: 1 },
+        });
+
         // Track the temp ID so useBoardSocket can reconcile when the server responds
         useCanvasStore.getState().addPendingTemp(tempId, elementData);
 
@@ -267,11 +283,34 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
       if (isSelecting && selectionBox) {
         const canvasPos = getPointerCanvasPos();
         if (canvasPos) {
+          const newWidth = canvasPos.x - selectionBox.startX;
+          const newHeight = canvasPos.y - selectionBox.startY;
+          
           setSelectionBox((prev) => ({
             ...prev,
-            width: canvasPos.x - prev.startX,
-            height: canvasPos.y - prev.startY,
+            width: newWidth,
+            height: newHeight,
           }));
+
+          // Compute real-time selection
+          const minX = Math.min(selectionBox.startX, selectionBox.startX + newWidth);
+          const maxX = Math.max(selectionBox.startX, selectionBox.startX + newWidth);
+          const minY = Math.min(selectionBox.startY, selectionBox.startY + newHeight);
+          const maxY = Math.max(selectionBox.startY, selectionBox.startY + newHeight);
+
+          if (Math.abs(newWidth) > 5 || Math.abs(newHeight) > 5) {
+            const matchedIds = elements
+              .filter((el) => {
+                const ew = el.width || 100;
+                const eh = el.height || 100;
+                return el.x < maxX && el.x + ew > minX && el.y < maxY && el.y + eh > minY;
+              })
+              .map((el) => el.id);
+
+            useCanvasStore.getState().selectArea(matchedIds);
+          } else {
+            useCanvasStore.getState().clearSelection();
+          }
         }
       }
     },
@@ -280,25 +319,6 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
 
   const handleMouseUp = useCallback(() => {
     if (isSelecting && selectionBox) {
-      // Compute which elements are within the selection box
-      const minX = Math.min(selectionBox.startX, selectionBox.startX + selectionBox.width);
-      const maxX = Math.max(selectionBox.startX, selectionBox.startX + selectionBox.width);
-      const minY = Math.min(selectionBox.startY, selectionBox.startY + selectionBox.height);
-      const maxY = Math.max(selectionBox.startY, selectionBox.startY + selectionBox.height);
-
-      // Only trigger area select if the drag area is meaningful
-      if (Math.abs(selectionBox.width) > 5 || Math.abs(selectionBox.height) > 5) {
-        const matchedIds = elements
-          .filter((el) => {
-            const ew = el.width || 100;
-            const eh = el.height || 100;
-            return el.x < maxX && el.x + ew > minX && el.y < maxY && el.y + eh > minY;
-          })
-          .map((el) => el.id);
-
-        useCanvasStore.getState().selectArea(matchedIds);
-      }
-
       setSelectionBox(null);
       setIsSelecting(false);
     }
@@ -341,6 +361,12 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
       if (!el || !socket) return;
 
       // Optimistic update
+      useCanvasStore.getState().pushHistory({
+        type: 'UPDATE',
+        elementId: id,
+        previousData: { x: el.x, y: el.y },
+        nextData: newPos
+      });
       useCanvasStore.getState().updateElement(id, newPos);
 
       // Emit move to server
@@ -379,17 +405,29 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
     selectedIds.forEach((id) => {
       const el = elements.find((e) => e.id === id);
       if (!el) return;
+      const newElement = {
+        type: el.type,
+        x: el.x + 20,
+        y: el.y + 20,
+        width: el.width,
+        height: el.height,
+        color: el.color,
+        text: el.text,
+      };
+      const tempId = generateTempId();
+
+      useCanvasStore.getState().addElement({ id: tempId, ...newElement, version: 1 });
+      useCanvasStore.getState().pushHistory({
+        type: 'CREATE',
+        elementId: tempId,
+        nextData: { ...newElement, version: 1 },
+      });
+      useCanvasStore.getState().addPendingTemp(tempId, newElement);
+
       socket.emit('element:created', {
         boardId,
-        element: {
-          type: el.type,
-          x: el.x + 20,
-          y: el.y + 20,
-          width: el.width,
-          height: el.height,
-          color: el.color,
-          text: el.text,
-        },
+        element: newElement,
+        tempId,
       });
     });
   }, [selectedIds, elements, boardId]);
@@ -399,6 +437,14 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
     if (!socket) return;
 
     selectedIds.forEach((id) => {
+      const el = elements.find((e) => e.id === id);
+      if (el) {
+        useCanvasStore.getState().pushHistory({
+          type: 'DELETE',
+          elementId: id,
+          previousData: el
+        });
+      }
       socket.emit('element:deleted', { boardId, elementId: id });
       useCanvasStore.getState().removeElement(id);
     });
@@ -413,6 +459,12 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
       selectedIds.forEach((id) => {
         const el = elements.find((e) => e.id === id);
         if (!el) return;
+        useCanvasStore.getState().pushHistory({
+          type: 'UPDATE',
+          elementId: id,
+          previousData: { color: el.color },
+          nextData: { color }
+        });
         useCanvasStore.getState().updateElement(id, { color });
         socket.emit('element:updated', {
           boardId,
@@ -511,7 +563,7 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
         scaleY={zoom}
         x={panOffset.x * zoom}
         y={panOffset.y * zoom}
-        draggable={tool === 'select'}
+        draggable={isSpacePanning}
         onDragEnd={(e) => {
           // Only handle stage drag (pan), not element drags
           if (e.target === stageRef.current) {
@@ -563,8 +615,7 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
             return (
               <LockIndicator
                 key={`lock-${el.id}`}
-                x={el.x}
-                y={el.y}
+                element={el}
                 lockedBy={lockedBy}
               />
             );
@@ -614,6 +665,12 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
                 };
 
                 // Optimistic update
+                useCanvasStore.getState().pushHistory({
+                  type: 'UPDATE',
+                  elementId: id,
+                  previousData: { x: el.x, y: el.y, width: el.width, height: el.height, rotation: el.rotation },
+                  nextData: updates
+                });
                 useCanvasStore.getState().updateElement(id, updates);
 
                 // Emit to server
@@ -650,6 +707,8 @@ export default function Canvas({ boardId, sendCursorMove, requestLock, releaseLo
           }}
         />
       )}
+
+      <PropertiesPanel />
 
       {/* Context menu (HTML overlay) */}
       <ElementContextMenu

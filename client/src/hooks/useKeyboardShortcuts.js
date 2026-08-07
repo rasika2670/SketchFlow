@@ -43,6 +43,15 @@ export function useKeyboardShortcuts(boardId) {
       const { selectedIds, elements, clipboard } = store;
       const socket = getBoardSocket();
 
+      // Space to pan
+      if (e.code === 'Space') {
+        if (!store.isSpacePanning) {
+          store.setSpacePanning(true);
+        }
+        // Don't prevent default if they are in an input, but the early return already handles that
+        return;
+      }
+
       // Clear selection / close modals
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -63,6 +72,14 @@ export function useKeyboardShortcuts(boardId) {
         e.preventDefault();
         if (!socket) return;
         selectedIds.forEach((id) => {
+          const el = elements.find((e) => e.id === id);
+          if (el) {
+            store.pushHistory({
+              type: 'DELETE',
+              elementId: id,
+              previousData: el
+            });
+          }
           socket.emit('element:deleted', { boardId, elementId: id });
           store.removeElement(id);
         });
@@ -86,6 +103,31 @@ export function useKeyboardShortcuts(boardId) {
         return;
       }
 
+      // Cut (Ctrl+X)
+      if (e.key === 'x' && (e.ctrlKey || e.metaKey)) {
+        if (selectedIds.length > 0) {
+          e.preventDefault();
+          store.copyElements();
+          
+          // Delete copied elements
+          if (!socket) return;
+          selectedIds.forEach((id) => {
+            const el = elements.find((e) => e.id === id);
+            if (el) {
+              store.pushHistory({
+                type: 'DELETE',
+                elementId: id,
+                previousData: el
+              });
+            }
+            socket.emit('element:deleted', { boardId, elementId: id });
+            store.removeElement(id);
+          });
+          store.clearSelection();
+        }
+        return;
+      }
+
       // Duplicate function
       const duplicateElementsList = (sourceElements) => {
         if (!socket || sourceElements.length === 0) return;
@@ -105,6 +147,11 @@ export function useKeyboardShortcuts(boardId) {
           };
           
           store.addElement({ id: tempId, ...elementData, version: 1 });
+          store.pushHistory({
+            type: 'CREATE',
+            elementId: tempId,
+            nextData: { ...elementData, version: 1 },
+          });
           store.addPendingTemp(tempId, elementData);
           socket.emit('element:created', { boardId, element: elementData, tempId });
         });
@@ -130,9 +177,34 @@ export function useKeyboardShortcuts(boardId) {
         }
         return;
       }
+      // Undo (Ctrl+Z)
+      if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        e.preventDefault();
+        store.undo(socket, boardId);
+        return;
+      }
+
+      // Redo (Ctrl+Y or Ctrl+Shift+Z)
+      if ((e.key === 'y' && (e.ctrlKey || e.metaKey)) || (e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey)) {
+        e.preventDefault();
+        store.redo(socket, boardId);
+        return;
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      // Space to end pan
+      if (e.code === 'Space') {
+        const store = useCanvasStore.getState();
+        store.setSpacePanning(false);
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
   }, [boardId]);
 }

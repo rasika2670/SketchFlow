@@ -12,6 +12,7 @@ function normalizeElement(el) {
     width: el.width != null ? Number(el.width) : null,
     height: el.height != null ? Number(el.height) : null,
     version: Number(el.version) || 1,
+    properties: el.properties || {},
   };
 }
 
@@ -23,10 +24,108 @@ export const useCanvasStore = create((set, get) => ({
   zoom: 1.0,
   panOffset: { x: 0, y: 0 },
   isDrawing: false,
+  isSpacePanning: false,
   fillColor: '#6E56CF', // Default fill color for new elements
   lockedElements: {}, // { [elementId]: { userId, userName } }
   pendingTempIds: new Map(), // Map<tempId, elementData> for optimistic creation reconciliation
   clipboard: [], // Array of copied element data
+  undoStack: [],
+  redoStack: [],
+
+  // ─── History (Undo/Redo) ────────────────────────────────────────────────────
+
+  /** 
+   * Push an action to the undo stack and clear the redo stack.
+   * Action format: { type: 'UPDATE' | 'CREATE' | 'DELETE', elementId, previousData, nextData } 
+   */
+  pushHistory: (action) => {
+    set((state) => ({
+      undoStack: [...state.undoStack, action],
+      redoStack: [],
+    }));
+  },
+
+  undo: (socket, boardId) => {
+    const { undoStack, elements, updateElement, removeElement, addElement } = get();
+    if (undoStack.length === 0) return;
+
+    const newUndo = [...undoStack];
+    const action = newUndo.pop();
+    
+    // Apply inverse
+    let targetEl;
+    if (action.type === 'UPDATE') {
+      targetEl = elements.find(e => e.id === action.elementId);
+      if (targetEl) {
+        updateElement(action.elementId, action.previousData);
+        if (socket) {
+          socket.emit('element:updated', {
+            boardId,
+            elementId: action.elementId,
+            updates: action.previousData,
+            version: targetEl.version
+          });
+        }
+      }
+    } else if (action.type === 'CREATE') {
+      // Inverse of create is delete
+      removeElement(action.elementId);
+      if (socket) {
+        socket.emit('element:deleted', { boardId, elementId: action.elementId });
+      }
+    } else if (action.type === 'DELETE') {
+      // Inverse of delete is create
+      addElement(action.previousData);
+      if (socket) {
+        socket.emit('element:created', { boardId, element: action.previousData });
+      }
+    }
+
+    set((state) => ({
+      undoStack: newUndo,
+      redoStack: [...state.redoStack, action],
+    }));
+  },
+
+  redo: (socket, boardId) => {
+    const { redoStack, elements, updateElement, removeElement, addElement } = get();
+    if (redoStack.length === 0) return;
+
+    const newRedo = [...redoStack];
+    const action = newRedo.pop();
+
+    // Re-apply action
+    let targetEl;
+    if (action.type === 'UPDATE') {
+      targetEl = elements.find(e => e.id === action.elementId);
+      if (targetEl) {
+        updateElement(action.elementId, action.nextData);
+        if (socket) {
+          socket.emit('element:updated', {
+            boardId,
+            elementId: action.elementId,
+            updates: action.nextData,
+            version: targetEl.version
+          });
+        }
+      }
+    } else if (action.type === 'CREATE') {
+      addElement(action.nextData);
+      if (socket) {
+        socket.emit('element:created', { boardId, element: action.nextData });
+      }
+    } else if (action.type === 'DELETE') {
+      removeElement(action.elementId);
+      if (socket) {
+        socket.emit('element:deleted', { boardId, elementId: action.elementId });
+      }
+    }
+
+    set((state) => ({
+      redoStack: newRedo,
+      undoStack: [...state.undoStack, action],
+    }));
+  },
 
   // ─── Element CRUD ───────────────────────────────────────────────────────────
 
@@ -63,6 +162,13 @@ export const useCanvasStore = create((set, get) => ({
       selectedIds: state.selectedIds.map((sid) =>
         sid === tempId ? normalized.id : sid
       ),
+      // Update history stacks to use the new server ID
+      undoStack: state.undoStack.map((action) =>
+        action.elementId === tempId ? { ...action, elementId: normalized.id } : action
+      ),
+      redoStack: state.redoStack.map((action) =>
+        action.elementId === tempId ? { ...action, elementId: normalized.id } : action
+      ),
     }));
   },
 
@@ -93,7 +199,11 @@ export const useCanvasStore = create((set, get) => ({
 
     set((state) => ({
       elements: state.elements.map((el) =>
-        el.id === id ? { ...el, ...normalized } : el
+        el.id === id ? { 
+          ...el, 
+          ...normalized,
+          properties: normalized.properties ? { ...(el.properties || {}), ...normalized.properties } : el.properties
+        } : el
       ),
     }));
   },
@@ -165,6 +275,11 @@ export const useCanvasStore = create((set, get) => ({
   /** Set drawing state */
   setIsDrawing: (drawing) => {
     set({ isDrawing: drawing });
+  },
+
+  /** Set space panning state */
+  setSpacePanning: (panning) => {
+    set({ isSpacePanning: panning });
   },
 
   /** Set fill color for new elements */
