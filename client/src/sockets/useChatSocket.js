@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { getBoardSocket } from './socket';
 import { useChatStore } from '@/stores/chatStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useUIStore } from '@/stores/uiStore';
 
 /**
  * useChatSocket — listens for real-time chat events on the board socket
@@ -29,6 +30,11 @@ export function useChatSocket(boardId) {
       // Avoid duplicating if we're the sender (optimistic already added it)
       if (message.user_id === currentUserId) return;
       useChatStore.getState().addMessage(message);
+
+      const { activePanel, sidebarOpen } = useUIStore.getState();
+      if (activePanel !== 'chat' || !sidebarOpen) {
+        useChatStore.getState().incrementUnread();
+      }
 
       // If thread view is open and this is a reply to the current thread parent
       const { threadParent } = useChatStore.getState();

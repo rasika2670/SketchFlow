@@ -185,7 +185,8 @@ async function getByBoardId(boardId, filters = {}) {
     `SELECT t.id, t.title, t.description, t.status, t.priority,
             t.assignee_id, t.due_date, t.board_id, t.created_by,
             t.version, t.created_at, t.updated_at,
-            u.name AS assignee_name, u.avatar_url AS assignee_avatar
+            u.name AS assignee_name, u.avatar_url AS assignee_avatar,
+            (SELECT COUNT(*)::int FROM task_comments tc WHERE tc.task_id = t.id) AS comment_count
      FROM tasks t
      LEFT JOIN users u ON u.id = t.assignee_id
      WHERE ${conditions.join(' AND ')}
@@ -479,6 +480,54 @@ async function validateAssigneeWorkspaceMembership(boardId, userId) {
   }
 }
 
+/**
+ * Get comments for a task.
+ * @param {string} taskId 
+ * @returns {Promise<Object[]>}
+ */
+async function getComments(taskId) {
+  const result = await query(
+    `SELECT c.id, c.task_id, c.user_id, c.comment, c.created_at, c.updated_at,
+            u.name as user_name, u.avatar_url as user_avatar
+     FROM task_comments c
+     JOIN users u ON u.id = c.user_id
+     WHERE c.task_id = $1
+     ORDER BY c.created_at ASC`,
+    [taskId]
+  );
+  return result.rows;
+}
+
+/**
+ * Add a comment to a task.
+ * @param {string} taskId 
+ * @param {string} userId 
+ * @param {string} comment 
+ * @returns {Promise<Object>}
+ */
+async function addComment(taskId, userId, comment) {
+  const result = await query(
+    `INSERT INTO task_comments (task_id, user_id, comment)
+     VALUES ($1, $2, $3)
+     RETURNING id, task_id, user_id, comment, created_at, updated_at`,
+    [taskId, userId, comment]
+  );
+  
+  // fetch user info to return complete comment object
+  const userResult = await query(
+    `SELECT name, avatar_url FROM users WHERE id = $1`,
+    [userId]
+  );
+  
+  const createdComment = {
+    ...result.rows[0],
+    user_name: userResult.rows[0].name,
+    user_avatar: userResult.rows[0].avatar_url
+  };
+  
+  return createdComment;
+}
+
 module.exports = {
   create,
   convertFromSticky,
@@ -488,4 +537,6 @@ module.exports = {
   updateStatus,
   assignTask,
   softDelete,
+  getComments,
+  addComment,
 };

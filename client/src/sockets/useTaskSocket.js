@@ -64,12 +64,19 @@ export function useTaskSocket(boardId) {
       useTaskStore.getState().removeTask(taskId);
     };
 
+    const handleCommentAdded = ({ comment }) => {
+      // The store handles deduplication by ID, and only adding to selected task
+      if (comment.user_id === currentUserId) return;
+      useTaskStore.getState().addCommentFromSocket(comment);
+    };
+
     // ─── Register listeners ──────────────────────────────────────────────
     socket.on('task:created', handleTaskCreated);
     socket.on('task:updated', handleTaskUpdated);
     socket.on('task:status_changed', handleTaskStatusChanged);
     socket.on('task:assigned', handleTaskAssigned);
     socket.on('task:deleted', handleTaskDeleted);
+    socket.on('task:comment_added', handleCommentAdded);
 
     // On reconnect, reload tasks
     const handleReconnect = () => {
@@ -84,6 +91,7 @@ export function useTaskSocket(boardId) {
       socket.off('task:status_changed', handleTaskStatusChanged);
       socket.off('task:assigned', handleTaskAssigned);
       socket.off('task:deleted', handleTaskDeleted);
+      socket.off('task:comment_added', handleCommentAdded);
       socket.io.off('reconnect', handleReconnect);
       useTaskStore.getState().reset();
     };

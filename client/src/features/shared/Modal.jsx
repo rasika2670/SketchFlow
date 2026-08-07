@@ -60,7 +60,7 @@ export default function Modal({
     >
       <div
         ref={contentRef}
-        className={`w-full ${sizeClasses[size]} bg-sf-raised border border-slate-700 rounded-sf-lg shadow-sf-floating animate-slide-up`}
+        className={`w-full ${sizeClasses[size]} bg-sf-raised border border-slate-700 rounded-sf-lg shadow-sf-floating animate-slide-up flex flex-col max-h-[95vh]`}
       >
         {/* Header */}
         {(title || showCloseButton) && (
@@ -83,7 +83,7 @@ export default function Modal({
         )}
 
         {/* Body */}
-        <div className="px-sf-6 py-sf-4">
+        <div className="px-sf-6 py-sf-4 overflow-y-auto">
           {children}
         </div>
       </div>

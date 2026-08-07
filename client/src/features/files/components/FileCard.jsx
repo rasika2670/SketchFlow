@@ -43,7 +43,8 @@ function isImage(mimeType) {
 }
 
 /**
- * FileCard — displays a single file with actions (download, preview, delete).
+ * FileCard — displays a single file as a responsive grid card.
+ * Includes hover overlay for actions (download, preview, delete).
  */
 function FileCard({ file, onDelete, onPreview }) {
   const [showConfirm, setShowConfirm] = useState(false);
@@ -54,79 +55,75 @@ function FileCard({ file, onDelete, onPreview }) {
     : '';
 
   const filename = file.name || file.filename || file.original_name || 'Untitled';
+  const isImg = isImage(file.mime_type);
 
   return (
     <>
-      <div className="group flex items-center gap-3 p-2.5 rounded-sf-md hover:bg-slate-800/50 transition-colors duration-sf-fast">
-        {/* File type icon */}
-        <div className="flex-shrink-0 p-2 rounded-sf-sm bg-slate-800 text-slate-400 group-hover:text-slate-300 transition-colors">
-          <Icon size={18} />
-        </div>
+      <div className="group relative flex flex-col bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/50 hover:border-slate-600 rounded-sf-lg overflow-hidden transition-all duration-sf-fast shadow-sm hover:shadow-md">
+        
+        {/* Preview Area */}
+        <div className="h-36 bg-slate-900/50 flex items-center justify-center relative overflow-hidden">
+          {isImg ? (
+            <img 
+              src={file.url} 
+              alt={filename} 
+              className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
+            />
+          ) : (
+            <Icon size={48} className="text-slate-600 group-hover:text-slate-500 transition-colors" />
+          )}
 
-        {/* File info */}
-        <div className="flex-1 min-w-0">
-          <a 
-            href={file.url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-sf-sm font-medium text-slate-200 hover:text-primary-400 truncate block transition-colors" 
-            title={filename}
-          >
-            {filename}
-          </a>
-          <div className="flex items-center gap-2 text-[11px] text-slate-500">
-            <span>{formatFileSize(file.size)}</span>
-            {file.uploader_name && (
-              <>
-                <span>·</span>
-                <span className="truncate">{file.uploader_name}</span>
-              </>
+          {/* Hover Actions Overlay */}
+          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-sf-fast flex items-center justify-center gap-3 backdrop-blur-[2px]">
+            {isImg && (
+              <button
+                onClick={onPreview}
+                className="p-2.5 bg-slate-800 hover:bg-primary-500 text-slate-200 hover:text-white rounded-full transition-colors shadow-lg"
+                title="Preview"
+              >
+                <Eye size={18} />
+              </button>
             )}
-            {timestamp && (
-              <>
-                <span>·</span>
-                <span>{timestamp}</span>
-              </>
-            )}
+            <a
+              href={file.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2.5 bg-slate-800 hover:bg-primary-500 text-slate-200 hover:text-white rounded-full transition-colors shadow-lg"
+              title="Download"
+            >
+              <Download size={18} />
+            </a>
+            <button
+              onClick={() => setShowConfirm(true)}
+              className="p-2.5 bg-slate-800 hover:bg-error text-slate-200 hover:text-white rounded-full transition-colors shadow-lg"
+              title="Delete"
+            >
+              <Trash2 size={18} />
+            </button>
           </div>
         </div>
 
-        {/* Action buttons — visible on hover */}
-        <div className="flex-shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-sf-fast">
-          {/* Download */}
-          <a
-            href={file.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded-sf-sm transition-colors"
-            title="Download"
-          >
-            <Download size={14} />
-          </a>
-
-          {/* Preview (images only) */}
-          {isImage(file.mime_type) && (
-            <button
-              onClick={onPreview}
-              className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded-sf-sm transition-colors"
-              title="Preview"
-            >
-              <Eye size={14} />
-            </button>
+        {/* Metadata Area */}
+        <div className="p-3.5 flex flex-col flex-1 border-t border-slate-700/50">
+          <div className="flex items-start gap-2 mb-3">
+            <Icon size={16} className="text-slate-400 flex-shrink-0 mt-0.5" />
+            <span className="text-sf-sm font-semibold text-slate-200 truncate group-hover:text-primary-400 transition-colors" title={filename}>
+              {filename}
+            </span>
+          </div>
+          
+          <div className="mt-auto flex items-center justify-between text-[11px] font-medium text-slate-500">
+            <span className="truncate max-w-[65%]">{file.uploader_name || 'Unknown User'}</span>
+            <span className="flex-shrink-0">{formatFileSize(file.size)}</span>
+          </div>
+          {timestamp && (
+             <div className="text-[10px] text-slate-600 mt-1.5">
+               Added {timestamp}
+             </div>
           )}
-
-          {/* Delete */}
-          <button
-            onClick={() => setShowConfirm(true)}
-            className="p-1.5 text-slate-400 hover:text-error hover:bg-error/10 rounded-sf-sm transition-colors"
-            title="Delete"
-          >
-            <Trash2 size={14} />
-          </button>
         </div>
       </div>
 
-      {/* Delete confirmation */}
       <ConfirmDialog
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}

@@ -14,7 +14,7 @@ export default function KanbanColumn({ status, tasks, onTaskClick }) {
     <div
       ref={setNodeRef}
       className={`
-        rounded-sf-md border transition-all duration-sf-fast
+        flex flex-col w-72 flex-shrink-0 h-full rounded-sf-md border transition-all duration-sf-fast
         ${isOver
           ? 'border-primary-500/50 bg-primary-500/5'
           : 'border-slate-700/50 bg-slate-800/30'
@@ -36,7 +36,7 @@ export default function KanbanColumn({ status, tasks, onTaskClick }) {
       </div>
 
       {/* Task cards */}
-      <div className="px-1.5 pb-1.5 space-y-1.5 min-h-[4px]">
+      <div className="flex-1 overflow-y-auto px-1.5 pb-1.5 space-y-1.5 min-h-[4px]">
         {tasks.map((task) => (
           <TaskCard
             key={task.id}

@@ -1,6 +1,6 @@
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { Calendar, Flag, User } from 'lucide-react';
+import { Calendar, Flag, User, MessageCircle } from 'lucide-react';
 import { format, isPast, isToday } from 'date-fns';
 import { TASK_PRIORITIES } from '@/stores/taskStore';
 
@@ -85,6 +85,14 @@ export default function TaskCard({ task, onClick, isDragOverlay = false }) {
           <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 ml-auto">
             <User size={10} />
             {task.assignee_name.split(' ')[0]}
+          </span>
+        )}
+
+        {/* Comment count */}
+        {task.comment_count > 0 && (
+          <span className={`inline-flex items-center gap-1 text-[11px] text-slate-400 ${!task.assignee_name ? 'ml-auto' : ''}`}>
+            <MessageCircle size={10} />
+            {task.comment_count}
           </span>
         )}
       </div>

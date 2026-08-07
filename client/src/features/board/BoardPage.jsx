@@ -14,6 +14,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import BoardHeader from './components/BoardHeader';
 import Toolbar from './components/Toolbar';
 import RightSidebar from './components/RightSidebar';
+import FullScreenOverlay from './components/FullScreenOverlay';
 import Canvas from '@/features/canvas/Canvas';
 import CanvasControls from '@/features/canvas/CanvasControls';
 
@@ -79,22 +80,28 @@ export default function BoardPage() {
 
       {/* Main content area */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Toolbar */}
-        <Toolbar />
-
-        {/* Canvas area (fills remaining space) */}
-        <div className="relative flex-1 min-w-0 overflow-hidden">
-          <Canvas
-            boardId={boardId}
-            sendCursorMove={sendCursorMove}
-            requestLock={requestLock}
-            releaseLock={releaseLock}
-          />
-          <CanvasControls />
-        </div>
-
-        {/* Right Sidebar */}
+        {/* Left Sidebar (formerly RightSidebar) */}
         <RightSidebar />
+
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden relative">
+          {/* Top Toolbar */}
+          <Toolbar />
+          
+          {/* Canvas area (fills remaining space) */}
+          <div className="relative flex-1 min-w-0 overflow-hidden">
+            <Canvas
+              boardId={boardId}
+              sendCursorMove={sendCursorMove}
+              requestLock={requestLock}
+              releaseLock={releaseLock}
+            />
+            <CanvasControls />
+            
+          </div>
+          
+          {/* Full Screen Overlay for Panels */}
+          <FullScreenOverlay />
+        </div>
       </div>
     </div>
   );

@@ -59,3 +59,15 @@ export const assignTask = (taskId, assigneeId, version) =>
  */
 export const remove = (taskId) =>
   api.delete(`/tasks/${taskId}`);
+
+/**
+ * Get comments for a task.
+ */
+export const getComments = (taskId) =>
+  api.get(`/tasks/${taskId}/comments`);
+
+/**
+ * Add a comment to a task.
+ */
+export const addComment = (taskId, comment) =>
+  api.post(`/tasks/${taskId}/comments`, { comment });

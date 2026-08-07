@@ -149,6 +149,19 @@ const listFilters = {
   }),
 };
 
+/**
+ * POST /api/tasks/:taskId/comments
+ */
+const addComment = {
+  params: Joi.object({
+    taskId: uuidSchema.messages({ 'string.guid': 'Invalid task ID' }),
+  }),
+  body: Joi.object({
+    comment: Joi.string().min(1).max(5000).required()
+      .messages({ 'any.required': 'comment is required' }),
+  }),
+};
+
 module.exports = {
   create,
   convertFromSticky,
@@ -158,4 +171,5 @@ module.exports = {
   taskIdParam,
   boardIdParam,
   listFilters,
+  addComment,
 };

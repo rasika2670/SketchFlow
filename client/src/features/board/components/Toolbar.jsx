@@ -37,33 +37,37 @@ export default function Toolbar() {
   const setFillColor = useCanvasStore((s) => s.setFillColor);
 
   return (
-    <div className="w-14 flex-shrink-0 flex flex-col items-center py-3 gap-1 bg-slate-900/80 backdrop-blur-md border-r border-slate-700 z-30">
+    <div className="h-14 flex-shrink-0 flex flex-row items-center px-4 gap-2 bg-slate-900/80 backdrop-blur-md border-b border-slate-700 z-30 w-full overflow-x-auto overflow-y-hidden">
       {/* Tool buttons */}
-      {TOOLS.map(({ id, icon: Icon, label }) => {
+      {TOOLS.map(({ id, icon: Icon, label }, index) => {
         const isActive = tool === id;
+        const numberKey = index + 1; // 1 to 8
         return (
           <button
             key={id}
             onClick={() => setTool(id)}
             className={`
-              w-10 h-10 flex items-center justify-center rounded-sf-md transition-all duration-sf-fast
+              relative w-10 h-10 flex items-center justify-center rounded-sf-md transition-all duration-sf-fast
               ${isActive
                 ? 'bg-primary-500/20 text-primary-400 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
               }
             `}
-            title={label}
+            title={`${label} — ${numberKey}`}
           >
             <Icon size={20} />
+            <span className={`absolute bottom-0.5 right-1 text-[9px] font-bold pointer-events-none select-none ${isActive ? 'text-primary-400/80' : 'text-slate-500'}`}>
+              {numberKey}
+            </span>
           </button>
         );
       })}
 
       {/* Divider */}
-      <div className="w-7 h-px bg-slate-700 my-1" />
+      <div className="h-7 w-px bg-slate-700 mx-2" />
 
       {/* Color picker */}
-      <div className="flex flex-col items-center gap-1">
+      <div className="flex flex-row items-center gap-1">
         {FILL_COLORS.slice(0, 6).map((color) => (
           <button
             key={color}

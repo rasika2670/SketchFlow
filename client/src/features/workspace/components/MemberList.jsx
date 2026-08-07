@@ -101,6 +101,7 @@ export default function MemberList({
             >
               <Avatar
                 user={{
+                  id: userId,
                   name: memberUser.name || member.name,
                   avatar_url: memberUser.avatar_url || member.avatar_url,
                 }}

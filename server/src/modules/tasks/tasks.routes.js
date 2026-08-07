@@ -85,6 +85,22 @@ taskRouter.delete(
   tasksController.remove
 );
 
+// Get task comments — all workspace members
+taskRouter.get(
+  '/:taskId/comments',
+  validate(tasksValidation.taskIdParam),
+  requireTaskBoardRole('admin', 'editor', 'viewer'),
+  tasksController.getComments
+);
+
+// Add task comment — all workspace members
+taskRouter.post(
+  '/:taskId/comments',
+  validate(tasksValidation.addComment),
+  requireTaskBoardRole('admin', 'editor', 'viewer'),
+  tasksController.addComment
+);
+
 module.exports = {
   boardScopedRouter,
   taskRouter,

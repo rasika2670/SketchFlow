@@ -23,6 +23,7 @@ export const useTaskStore = create((set, get) => ({
   // ─── State ──────────────────────────────────────────────────────────────────
   tasks: [],
   selectedTask: null,
+  selectedTaskComments: [],
   filters: {
     status: null,
     assignee_id: null,
@@ -180,6 +181,7 @@ export const useTaskStore = create((set, get) => ({
     set((state) => ({
       tasks: state.tasks.filter((t) => t.id !== taskId),
       selectedTask: state.selectedTask?.id === taskId ? null : state.selectedTask,
+      selectedTaskComments: state.selectedTask?.id === taskId ? [] : state.selectedTaskComments,
     }));
 
     try {
@@ -190,6 +192,54 @@ export const useTaskStore = create((set, get) => ({
       const message = error.response?.data?.message || 'Failed to delete task.';
       toast.error(message);
     }
+  },
+
+  // ─── Comments ───────────────────────────────────────────────────────────────
+
+  fetchComments: async (taskId) => {
+    try {
+      const { data } = await tasksApi.getComments(taskId);
+      const comments = data.data?.comments || [];
+      set({ selectedTaskComments: comments });
+    } catch (error) {
+      console.error('Failed to fetch comments:', error);
+      toast.error('Failed to load comments.');
+    }
+  },
+
+  addComment: async (taskId, text) => {
+    try {
+      const { data } = await tasksApi.addComment(taskId, text);
+      const comment = data.data?.comment;
+      set((state) => ({
+        selectedTaskComments: [...state.selectedTaskComments, comment],
+        tasks: state.tasks.map(t => t.id === taskId ? { ...t, comment_count: (t.comment_count || 0) + 1 } : t),
+      }));
+      return comment;
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to add comment.';
+      toast.error(message);
+      return null;
+    }
+  },
+
+  /** Socket: When a comment is added remotely */
+  addCommentFromSocket: (comment) => {
+    set((state) => {
+      // Only append if it's for the currently selected task and we don't already have it
+      if (state.selectedTask?.id === comment.task_id) {
+        if (state.selectedTaskComments.some(c => c.id === comment.id)) return state;
+        return {
+          selectedTaskComments: [...state.selectedTaskComments, comment],
+          tasks: state.tasks.map(t => t.id === comment.task_id ? { ...t, comment_count: (t.comment_count || 0) + 1 } : t),
+        };
+      }
+      
+      // If it's not the selected task, we just need to update the comment count in the task list
+      return {
+        tasks: state.tasks.map(t => t.id === comment.task_id ? { ...t, comment_count: (t.comment_count || 0) + 1 } : t),
+      };
+    });
   },
 
   // ─── Socket-driven state mutations ──────────────────────────────────────────
@@ -218,7 +268,10 @@ export const useTaskStore = create((set, get) => ({
   // ─── Selection & Filters ────────────────────────────────────────────────────
 
   setSelectedTask: (task) => {
-    set({ selectedTask: task });
+    set({ selectedTask: task, selectedTaskComments: [] });
+    if (task) {
+      get().fetchComments(task.id);
+    }
   },
 
   setFilters: (newFilters) => {

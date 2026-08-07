@@ -4,26 +4,7 @@ const sizeMap = {
   lg: 'w-10 h-10 text-sm',
 };
 
-// Generate a deterministic color from a string (user name)
-const getColorFromName = (name) => {
-  const colors = [
-    'bg-primary-500',
-    'bg-accent',
-    'bg-success',
-    'bg-warning',
-    'bg-error',
-    'bg-primary-600',
-    'bg-primary-400',
-    'bg-emerald-500',
-    'bg-cyan-500',
-    'bg-violet-500',
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
-};
+import { getUserColor } from '@/utils/userColors';
 
 // Get initials from name (max 2 characters)
 const getInitials = (name) => {
@@ -36,22 +17,25 @@ const getInitials = (name) => {
 export default function Avatar({ user, size = 'md', className = '' }) {
   const sizeClass = sizeMap[size] || sizeMap.md;
 
+  const color = getUserColor(user?.id || user?.userId, user?.name);
+
   if (user?.avatar_url) {
     return (
       <img
         src={user.avatar_url}
         alt={user.name || 'User'}
-        className={`${sizeClass} rounded-full object-cover ring-2 ring-slate-700 ${className}`}
+        className={`${sizeClass} rounded-full object-cover ring-2 ${className}`}
+        style={{ '--tw-ring-color': color }}
       />
     );
   }
 
-  const bgColor = getColorFromName(user?.name || 'Unknown');
   const initials = getInitials(user?.name);
 
   return (
     <div
-      className={`${sizeClass} ${bgColor} rounded-full flex items-center justify-center font-medium text-white ring-2 ring-slate-700 select-none ${className}`}
+      className={`${sizeClass} rounded-full flex items-center justify-center font-bold text-slate-900 ring-2 select-none ${className}`}
+      style={{ backgroundColor: color, '--tw-ring-color': color }}
       title={user?.name || 'Unknown'}
     >
       {initials}

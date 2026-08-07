@@ -1,28 +1,6 @@
 import { create } from 'zustand';
 
-// Deterministic color palette for cursor display
-const CURSOR_COLORS = [
-  '#38BDF8', // cyan
-  '#34D399', // emerald
-  '#FBBF24', // amber
-  '#FB7185', // rose
-  '#A78BFA', // violet
-  '#F97316', // orange
-  '#2DD4BF', // teal
-  '#E879F9', // fuchsia
-  '#60A5FA', // blue
-  '#4ADE80', // green
-];
-
-/** Get a deterministic color from user ID */
-const getColorForUser = (userId) => {
-  let hash = 0;
-  const str = String(userId);
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return CURSOR_COLORS[Math.abs(hash) % CURSOR_COLORS.length];
-};
+import { getUserColor } from '@/utils/userColors';
 
 export const usePresenceStore = create((set) => ({
   // ─── State ──────────────────────────────────────────────────────────────────
@@ -40,7 +18,7 @@ export const usePresenceStore = create((set) => ({
           id: u.userId || u.id,
           name: u.userName || u.name,
           avatar_url: u.userAvatar || u.avatar_url,
-          color: getColorForUser(u.userId || u.id),
+          color: getUserColor(u.userId || u.id, u.userName || u.name),
         };
       });
     }
@@ -57,7 +35,7 @@ export const usePresenceStore = create((set) => ({
           id: userId,
           name: user.userName || user.name,
           avatar_url: user.userAvatar || user.avatar_url,
-          color: getColorForUser(userId),
+          color: getUserColor(userId, user.userName || user.name),
         },
       },
     }));

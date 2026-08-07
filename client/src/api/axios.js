@@ -85,7 +85,7 @@ api.interceptors.response.use(
           { withCredentials: true }
         );
 
-        const newToken = data.accessToken;
+        const newToken = data.data.accessToken;
 
         // Update token in store
         if (getAuthStore) {

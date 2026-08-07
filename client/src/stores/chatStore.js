@@ -16,11 +16,16 @@ export const useChatStore = create((set, get) => ({
   hasMore: true,
   isLoading: false,
   cursor: null,
+  unreadCount: 0,
 
   // Thread view state
   threadParent: null,
   threadMessages: [],
   isThreadLoading: false,
+
+  // ─── Unread Count ───────────────────────────────────────────────────────────
+  incrementUnread: () => set((state) => ({ unreadCount: state.unreadCount + 1 })),
+  clearUnread: () => set({ unreadCount: 0 }),
 
   // ─── Fetch initial messages ─────────────────────────────────────────────────
   fetchMessages: async (boardId) => {

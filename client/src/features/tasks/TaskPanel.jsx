@@ -109,7 +109,7 @@ export default function TaskPanel() {
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="flex-1 overflow-y-auto space-y-3 pr-0.5">
+        <div className="flex-1 flex flex-row overflow-x-auto gap-4 p-1">
           {TASK_STATUSES.map((status) => (
             <KanbanColumn
               key={status.id}

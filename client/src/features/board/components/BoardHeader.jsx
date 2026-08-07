@@ -62,7 +62,7 @@ export default function BoardHeader({ board }) {
               title={user.name}
             >
               <Avatar
-                user={{ name: user.name, avatar_url: user.avatar_url }}
+                user={{ id: user.id, name: user.name, avatar_url: user.avatar_url }}
                 size="sm"
               />
               {/* Online indicator dot */}

@@ -183,6 +183,45 @@ const remove = catchAsync(async (req, res) => {
   res.status(204).send();
 });
 
+/**
+ * GET /api/tasks/:taskId/comments
+ * Get comments for a task.
+ */
+const getComments = catchAsync(async (req, res) => {
+  const comments = await tasksService.getComments(req.params.taskId);
+
+  res.status(200).json({
+    status: 'success',
+    data: { comments },
+  });
+});
+
+/**
+ * POST /api/tasks/:taskId/comments
+ * Add a comment to a task.
+ */
+const addComment = catchAsync(async (req, res) => {
+  const { comment } = req.body;
+  const newComment = await tasksService.addComment(req.params.taskId, req.user.id, comment);
+
+  // Broadcast to board room via Socket.IO
+  const io = getIO();
+  if (io) {
+    // Need to get board_id for the task to broadcast to the correct room
+    const task = await tasksService.getById(req.params.taskId);
+    io.to(`board:${task.board_id}`).emit('task:comment_added', {
+      boardId: task.board_id,
+      taskId: req.params.taskId,
+      comment: newComment,
+    });
+  }
+
+  res.status(201).json({
+    status: 'success',
+    data: { comment: newComment },
+  });
+});
+
 module.exports = {
   create,
   convertFromSticky,
@@ -192,4 +231,6 @@ module.exports = {
   updateStatus,
   assignTask,
   remove,
+  getComments,
+  addComment,
 };
